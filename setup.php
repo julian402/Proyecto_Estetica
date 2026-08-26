@@ -14,6 +14,35 @@
 $configFile   = __DIR__ . '/config/database.php';
 $exampleFile  = __DIR__ . '/config/database.php.example';
 $schemaFile   = __DIR__ . '/sql/schema.sql';
+$lockFile     = __DIR__ . '/config/installed.lock';
+
+// El instalador solo debe ejecutarse localmente y una unica vez.
+$remoteAddress = $_SERVER['REMOTE_ADDR'] ?? '';
+if (!in_array($remoteAddress, ['127.0.0.1', '::1'], true)) {
+    http_response_code(403);
+    exit('Instalador disponible solo desde localhost.');
+}
+if (file_exists($lockFile)) {
+    http_response_code(404);
+    exit('Instalador deshabilitado.');
+}
+
+session_start([
+    'use_strict_mode' => true,
+    'cookie_httponly' => true,
+    'cookie_samesite' => 'Strict',
+    'cookie_secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+]);
+if (empty($_SESSION['setup_csrf'])) {
+    $_SESSION['setup_csrf'] = bin2hex(random_bytes(32));
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $postedToken = $_POST['csrf_token'] ?? '';
+    if (!is_string($postedToken) || !hash_equals($_SESSION['setup_csrf'], $postedToken)) {
+        http_response_code(403);
+        exit('Token de seguridad invalido. Recarga la pagina.');
+    }
+}
 
 // ---- Estado ----
 $step           = 'config';   // config | install | done
@@ -28,11 +57,24 @@ $dbConnected    = false;
 // ACCION: Crear config/database.php
 // ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'config') {
-    $host    = trim($_POST['host'] ?? 'localhost');
-    $dbname  = trim($_POST['dbname'] ?? 'kbeauty_db');
-    $user    = trim($_POST['user'] ?? 'root');
+    $hostRaw = $_POST['host'] ?? 'localhost';
+    $dbnameRaw = $_POST['dbname'] ?? 'kbeauty_db';
+    $userRaw = $_POST['user'] ?? 'root';
     $pass    = $_POST['pass'] ?? '';
     $charset = 'utf8mb4';
+
+    if (!is_string($hostRaw) || !is_string($dbnameRaw) || !is_string($userRaw) || !is_string($pass)) {
+        http_response_code(422);
+        exit('Configuracion invalida.');
+    }
+    $host = trim($hostRaw);
+    $dbname = trim($dbnameRaw);
+    $user = trim($userRaw);
+    if ($host === '' || $user === '' || $dbname !== 'kbeauty_db'
+        || strlen($host) > 255 || strlen($user) > 128) {
+        http_response_code(422);
+        exit('Configuracion invalida.');
+    }
 
     $content = "<?php\n";
     $content .= "// Credenciales de base de datos - NO subir a git\n";
@@ -42,7 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confi
     $content .= "define('DB_PASS', " . var_export($pass, true) . ");\n";
     $content .= "define('DB_CHARSET', " . var_export($charset, true) . ");\n";
 
-    if (@file_put_contents($configFile, $content)) {
+    if (@file_put_contents($configFile, $content, LOCK_EX)) {
+        @chmod($configFile, 0600);
         $configExists = true;
         $message     = 'Archivo de configuracion creado correctamente.';
         $messageType = 'success';
@@ -72,7 +115,8 @@ if ($configExists) {
         $dbExists = (bool) $stmt->fetch();
 
     } catch (PDOException $e) {
-        $message     = 'No se pudo conectar a MySQL: ' . $e->getMessage() . '. Verifica que XAMPP este encendido (Apache + MySQL).';
+        error_log('Error de conexion del instalador: ' . $e->getMessage());
+        $message     = 'No se pudo conectar a MySQL. Verifica que XAMPP este encendido y que las credenciales sean correctas.';
         $messageType = 'error';
         $step        = 'config';
     }
@@ -82,19 +126,58 @@ if ($configExists) {
 // ACCION: Instalar base de datos
 // ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'install' && $dbConnected) {
+    $adminEmailRaw = $_POST['admin_email'] ?? '';
+    $adminPassword = $_POST['admin_password'] ?? '';
+    $adminConfirm = $_POST['admin_password_confirm'] ?? '';
 
-    if (!file_exists($schemaFile)) {
-        $message     = 'No se encontro el archivo sql/schema.sql';
+    if (!is_string($adminEmailRaw) || !is_string($adminPassword) || !is_string($adminConfirm)) {
+        $message = 'Datos del administrador invalidos.';
         $messageType = 'error';
     } else {
+        $adminEmail = strtolower(trim($adminEmailRaw));
+    }
+
+    if ($messageType !== 'error' && (!filter_var($adminEmail, FILTER_VALIDATE_EMAIL) || strlen($adminEmail) > 150)) {
+        $message = 'Ingresa un correo valido para el administrador.';
+        $messageType = 'error';
+    } elseif ($messageType !== 'error' && (strlen($adminPassword) < 12 || strlen($adminPassword) > 128)) {
+        $message = 'La clave del administrador debe tener entre 12 y 128 caracteres.';
+        $messageType = 'error';
+    } elseif ($messageType !== 'error' && !hash_equals($adminPassword, $adminConfirm)) {
+        $message = 'Las claves del administrador no coinciden.';
+        $messageType = 'error';
+    } elseif ($messageType !== 'error' && !file_exists($schemaFile)) {
+        $message     = 'No se encontro el archivo sql/schema.sql';
+        $messageType = 'error';
+    } elseif ($messageType !== 'error') {
         $results = executeSqlFile($pdo, $schemaFile);
 
         $errors = array_filter($results, function ($r) { return !$r['success']; });
 
         if (empty($errors)) {
-            $step        = 'done';
-            $message     = 'Base de datos instalada correctamente. Se ejecutaron ' . count($results) . ' instrucciones.';
-            $messageType = 'success';
+            try {
+                $hash = password_hash($adminPassword, PASSWORD_DEFAULT);
+                $stmt = $pdo->prepare(
+                    'INSERT INTO usuarios (id_rol, nombre, correo, password_hash, estado_cuenta)
+                     VALUES (2, :nombre, :correo, :password_hash, 1)'
+                );
+                $stmt->execute([
+                    'nombre' => 'Admin Principal',
+                    'correo' => $adminEmail,
+                    'password_hash' => $hash,
+                ]);
+                if (@file_put_contents($lockFile, date(DATE_ATOM) . PHP_EOL, LOCK_EX) === false) {
+                    throw new RuntimeException('No se pudo crear el bloqueo del instalador.');
+                }
+                @chmod($lockFile, 0600);
+                $step        = 'done';
+                $message     = 'Base de datos y administrador creados correctamente.';
+                $messageType = 'success';
+            } catch (Throwable $e) {
+                error_log('Error creando administrador: ' . $e->getMessage());
+                $message = 'La base se creo, pero no fue posible crear el administrador o bloquear el instalador.';
+                $messageType = 'error';
+            }
         } else {
             $message     = 'La instalacion termino con ' . count($errors) . ' error(es). Revisa los detalles abajo.';
             $messageType = 'warning';
@@ -149,7 +232,8 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
                     $pdo->exec($query);
                     $results[] = ['success' => true, 'preview' => $preview];
                 } catch (PDOException $e) {
-                    $results[] = ['success' => false, 'preview' => $preview, 'error' => $e->getMessage()];
+                    error_log('Error ejecutando esquema: ' . $e->getMessage());
+                    $results[] = ['success' => false, 'preview' => $preview, 'error' => 'No se pudo ejecutar esta instruccion.'];
                 }
             }
 
@@ -357,6 +441,7 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
       </p>
 
       <form method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['setup_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="action" value="config">
         <div class="form-group">
           <label class="form-label" for="host">Host</label>
@@ -404,7 +489,25 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
       </ul>
 
       <form method="post">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['setup_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="action" value="install">
+        <div class="form-group">
+          <label class="form-label" for="admin_email">Correo del administrador</label>
+          <input type="email" class="form-input" id="admin_email" name="admin_email"
+                 value="admin@hanulbeauty.co" maxlength="150" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="admin_password">Clave inicial del administrador</label>
+          <input type="password" class="form-input" id="admin_password" name="admin_password"
+                 minlength="12" maxlength="128" autocomplete="new-password" required>
+          <p class="form-hint">Minimo 12 caracteres. Solo se guardara el hash.</p>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="admin_password_confirm">Confirmar clave</label>
+          <input type="password" class="form-input" id="admin_password_confirm"
+                 name="admin_password_confirm" minlength="12" maxlength="128"
+                 autocomplete="new-password" required>
+        </div>
         <button type="submit" class="btn btn--primary"
                 onclick="return <?php echo $dbExists ? "confirm('Esto eliminara la base de datos existente. Continuar?')" : 'true'; ?>">
           <?php echo $dbExists ? 'Reinstalar base de datos' : 'Instalar base de datos'; ?>
@@ -429,6 +532,7 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
       <?php endif; ?>
 
       <form method="post" style="margin-top: 1rem;">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['setup_csrf'], ENT_QUOTES, 'UTF-8'); ?>">
         <input type="hidden" name="action" value="config">
         <input type="hidden" name="host" value="<?php echo htmlspecialchars(DB_HOST); ?>">
         <input type="hidden" name="dbname" value="<?php echo htmlspecialchars(DB_NAME); ?>">

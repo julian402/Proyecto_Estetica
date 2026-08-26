@@ -8,11 +8,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'Metodo no permitido'], 405);
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
+$input = json_input();
 
-$email    = trim($input['email'] ?? '');
+$emailRaw = $input['email'] ?? '';
 $password = $input['password'] ?? '';
 $token    = $input['csrf_token'] ?? '';
+
+if (!is_string($emailRaw) || !is_string($password) || !is_string($token)) {
+    json_response(['error' => 'Datos de acceso invalidos'], 422);
+}
+$email = strtolower(trim($emailRaw));
 
 // Validar CSRF
 if (!verify_csrf($token)) {
@@ -27,9 +32,19 @@ if ($email === '' || $password === '') {
 // Buscar usuario (findByEmail ya filtra estado_cuenta = 1)
 $user = User::findByEmail($email);
 
+$attempts = $_SESSION['login_attempts'] ?? [];
+$attempts = array_values(array_filter($attempts, fn($time) => is_int($time) && $time > time() - 900));
+if (count($attempts) >= 10) {
+    json_response(['error' => 'Demasiados intentos. Espera 15 minutos.'], 429);
+}
+
 if (!$user || !password_verify($password, $user['password_hash'])) {
+    $attempts[] = time();
+    $_SESSION['login_attempts'] = $attempts;
     json_response(['error' => 'Correo o contrasena incorrectos'], 401);
 }
+
+unset($_SESSION['login_attempts']);
 
 // Crear sesion (regenera ID para prevenir session fixation)
 login_session($user['id_usuario']);

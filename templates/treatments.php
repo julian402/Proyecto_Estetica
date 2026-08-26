@@ -16,14 +16,24 @@
       </div>
 
       <div class="treatments__grid">
-        <?php foreach ($treatments as $index => $t):
+        <?php
+        $treatmentImages = [
+          'Glass Skin Facial' => 'assets/images/glass-skin.jpg',
+          'Limpieza Profunda K-Derm' => 'assets/images/limpieza-profunda.jpg',
+          'Masaje Relajante Hanul' => 'assets/images/masaje-relajante.jpg',
+        ];
+        foreach ($treatments as $index => $t):
           $catLower = strtolower($t['nombre_categoria']);
           $filterCat = $catLower === 'facial' ? 'faciales' : 'corporales';
+          $imagePath = $treatmentImages[$t['nombre_servicio']] ?? 'assets/images/glass-skin.jpg';
         ?>
         <article class="treatment-card" data-category="<?php echo $filterCat; ?>">
           <div class="treatment-card__image">
             <span class="treatment-card__badge treatment-card__badge--<?php echo sanitize($catLower); ?>"><?php echo strtoupper(sanitize($t['nombre_categoria'])); ?></span>
-            <div class="treatment-card__img-placeholder treatment-card__img-placeholder--<?php echo $index + 1; ?>"></div>
+            <img class="treatment-card__img"
+                 src="<?php echo sanitize($imagePath); ?>"
+                 alt="<?php echo sanitize($t['nombre_servicio']); ?>"
+                 width="1456" height="1092" loading="lazy">
           </div>
           <div class="treatment-card__body">
             <h3 class="treatment-card__title"><?php echo sanitize($t['nombre_servicio']); ?></h3>

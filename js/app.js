@@ -10,6 +10,27 @@
     ? document.querySelector('input[name="csrf_token"]').value
     : '';
 
+  // ---- Indicador de navegacion activa ----
+  (function() {
+    var links = document.querySelectorAll('.nav__link');
+    var page = window.location.pathname.split('/').pop() || 'index.php';
+
+    function updateActiveLink() {
+      if (page !== 'index.php') return;
+      links.forEach(function(link) {
+        link.classList.remove('nav__link--active');
+        link.removeAttribute('aria-current');
+        if (window.location.hash && link.getAttribute('href') === window.location.hash) {
+          link.classList.add('nav__link--active');
+          link.setAttribute('aria-current', 'page');
+        }
+      });
+    }
+
+    updateActiveLink();
+    window.addEventListener('hashchange', updateActiveLink);
+  })();
+
   // ---- Carousel 3D ----
   (function() {
     var carousel = document.getElementById('heroCarousel');
@@ -151,11 +172,13 @@
       toggle.addEventListener('click', function(e) {
         e.stopPropagation();
         dropdown.classList.toggle('user-menu__dropdown--open');
+        toggle.setAttribute('aria-expanded', dropdown.classList.contains('user-menu__dropdown--open') ? 'true' : 'false');
       });
 
       document.addEventListener('click', function(e) {
         if (!e.target.closest('#userMenu')) {
           dropdown.classList.remove('user-menu__dropdown--open');
+          toggle.setAttribute('aria-expanded', 'false');
         }
       });
     }
@@ -338,7 +361,8 @@
     btn.addEventListener('click', function() {
       fetch('api/auth/logout.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csrf_token: csrfToken })
       })
       .then(function(res) { return res.json(); })
       .then(function(data) {

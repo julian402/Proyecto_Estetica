@@ -42,6 +42,9 @@ RewriteRule ^templates/ - [F,L]
     # Controlar informacion del referer
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+
     # No exponer version de PHP
     Header always unset X-Powered-By
 </IfModule>

@@ -40,11 +40,11 @@
         </div>
         <div class="form-group">
           <label class="form-label" for="regPassword">Contrasena</label>
-          <input type="password" class="form-input" id="regPassword" name="password" placeholder="Crea una contrasena" required>
+          <input type="password" class="form-input" id="regPassword" name="password" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Minimo 12 caracteres" required>
         </div>
         <div class="form-group">
           <label class="form-label" for="regPasswordConfirm">Confirmar contrasena</label>
-          <input type="password" class="form-input" id="regPasswordConfirm" name="password_confirm" placeholder="Repite la contrasena" required>
+          <input type="password" class="form-input" id="regPasswordConfirm" name="password_confirm" minlength="12" maxlength="128" autocomplete="new-password" placeholder="Repite la contrasena" required>
         </div>
         <p class="modal__error" id="registerError" style="color: #e74c3c; font-size: 0.875rem; display: none;"></p>
         <button type="submit" class="btn btn--primary btn--full">Registrarse</button>

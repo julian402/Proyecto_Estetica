@@ -12,13 +12,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_login();
 
-$input = json_decode(file_get_contents('php://input'), true);
+$input = json_input();
+
+$requestingUser = current_user();
+if (!$requestingUser || (int) $requestingUser['id_rol'] !== 1) {
+    json_response(['error' => 'Solo una cuenta de cliente puede crear reservas'], 403);
+}
 
 $servicioId    = (int) ($input['servicio_id'] ?? 0);
 $esteticId     = (int) ($input['esteticista_id'] ?? 0);
-$date          = trim($input['date'] ?? '');
-$time          = trim($input['time'] ?? '');
+$dateRaw       = $input['date'] ?? '';
+$timeRaw       = $input['time'] ?? '';
 $token         = $input['csrf_token'] ?? '';
+
+if (!is_string($dateRaw) || !is_string($timeRaw) || !is_string($token)) {
+    json_response(['error' => 'Datos de reserva invalidos'], 422);
+}
+$date = trim($dateRaw);
+$time = trim($timeRaw);
 
 // Validar CSRF
 if (!verify_csrf($token)) {
@@ -64,10 +75,17 @@ if (!$dateTime) {
     // Intentar formato 24h
     $dateTime = date_create_from_format('Y-m-d H:i', $date . ' ' . $time);
 }
+
 if (!$dateTime) {
     json_response(['error' => 'Formato de hora invalido'], 422);
 }
-
+$dateErrors = DateTime::getLastErrors();
+if (is_array($dateErrors) && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0)) {
+    json_response(['error' => 'Fecha u hora invalida'], 422);
+}
+if ($dateTime <= new DateTime('now')) {
+    json_response(['error' => 'La reserva debe ser para una fecha futura'], 422);
+}
 $fechaInicio = $dateTime->format('Y-m-d H:i:s');
 
 // Calcular fin sumando la duracion del servicio

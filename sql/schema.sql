@@ -204,14 +204,14 @@ INSERT INTO servicios (id_subcategoria, nombre_servicio, descripcion, duracion_m
   (2, 'Limpieza Profunda K-Derm', 'Doble limpieza, extraccion suave y ampolla calmante para renovar la piel sin irritar.', 60, 140000),
   (3, 'Masaje Relajante Hanul', 'Tecnica de liberacion miofascial con aceites tibios para aliviar tension acumulada.', 60, 150000);
 
--- Usuarios de ejemplo (password_hash placeholder; generar con password_hash() de PHP en produccion)
+-- Personal de ejemplo. "!" no es un hash valido: estas cuentas no pueden
+-- iniciar sesion hasta que un administrador les asigne una contrasena.
+-- El administrador inicial lo crea setup.php con una clave elegida al instalar.
 INSERT INTO usuarios (id_rol, nombre, correo, password_hash, telefono, estado_cuenta) VALUES
-  (2, 'Admin Principal',        'admin@hanulbeauty.co',       '$2y$10$PLACEHOLDER_HASH_ADMIN', '3000000000', TRUE),
-  (3, 'Recepcion Hanul',        'recepcion@hanulbeauty.co',   '$2y$10$PLACEHOLDER_HASH_RECEP', '3000000001', TRUE),
-  (4, 'Sofia R.',               'sofia@hanulbeauty.co',       '$2y$10$PLACEHOLDER_HASH_EST1',  '3000000002', TRUE),
-  (4, 'Diomar A.',              'diomar@hanulbeauty.co',      '$2y$10$PLACEHOLDER_HASH_EST2',  '3000000003', TRUE),
-  (4, 'Juan D.',                'juan@hanulbeauty.co',        '$2y$10$PLACEHOLDER_HASH_EST3',  '3000000004', TRUE),
-  (1, 'Cliente de Prueba',      'cliente@ejemplo.com',        '$2y$10$PLACEHOLDER_HASH_CLI',   '3000000005', TRUE);
+  (3, 'Recepcion Hanul', 'recepcion@hanulbeauty.co', '!', '3000000001', TRUE),
+  (4, 'Sofia R.',        'sofia@hanulbeauty.co',     '!', '3000000002', TRUE),
+  (4, 'Diomar A.',       'diomar@hanulbeauty.co',    '!', '3000000003', TRUE),
+  (4, 'Juan D.',         'juan@hanulbeauty.co',      '!', '3000000004', TRUE);
 
 -- ============================================================
 -- 10. TRIGGERS - Validacion de doble agendamiento

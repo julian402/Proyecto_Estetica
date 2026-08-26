@@ -17,6 +17,15 @@ function verify_csrf(string $token): bool {
     return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token);
 }
 
+/** Lee un objeto JSON y rechaza cuerpos vacios, invalidos o de otro tipo. */
+function json_input(): array {
+    $input = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($input) || array_is_list($input)) {
+        json_response(['error' => 'Solicitud JSON invalida'], 400);
+    }
+    return $input;
+}
+
 /**
  * Escapa una cadena para salida HTML segura.
  */

@@ -8,13 +8,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'Metodo no permitido'], 405);
 }
 
-$input = json_decode(file_get_contents('php://input'), true);
+$input = json_input();
 
-$name     = trim($input['name'] ?? '');
-$email    = trim($input['email'] ?? '');
+$nameRaw  = $input['name'] ?? '';
+$emailRaw = $input['email'] ?? '';
 $password = $input['password'] ?? '';
 $confirm  = $input['password_confirm'] ?? '';
 $token    = $input['csrf_token'] ?? '';
+
+if (!is_string($nameRaw) || !is_string($emailRaw) || !is_string($password)
+    || !is_string($confirm) || !is_string($token)) {
+    json_response(['error' => 'Datos de registro invalidos'], 422);
+}
+$name = trim($nameRaw);
+$email = strtolower(trim($emailRaw));
 
 // Validar CSRF
 if (!verify_csrf($token)) {
@@ -30,8 +37,12 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
     json_response(['error' => 'El correo no es valido'], 422);
 }
 
-if (strlen($password) < 6) {
-    json_response(['error' => 'La contrasena debe tener al menos 6 caracteres'], 422);
+if (mb_strlen($name) > 100 || strlen($email) > 150) {
+    json_response(['error' => 'Nombre o correo demasiado largo'], 422);
+}
+
+if (strlen($password) < 12 || strlen($password) > 128) {
+    json_response(['error' => 'La contrasena debe tener entre 12 y 128 caracteres'], 422);
 }
 
 if ($password !== $confirm) {
