@@ -1,0 +1,32 @@
+# Credenciales reales (nunca subir)
+config/database.php
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# IDEs y editores
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+nbproject/
+
+# Logs y temporales
+*.log
+*.tmp
+*.cache
+
+# Instaladores y binarios
+*.run
+*.exe
+*.dmg
+*.msi
+
+# Dependencias (si se agregan en el futuro)
+vendor/
+node_modules/

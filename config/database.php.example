@@ -1,0 +1,15 @@
+<?php
+// ============================================================
+// Configuracion de base de datos
+// ============================================================
+// 1. Copia este archivo como database.php en la misma carpeta:
+//    cp database.php.example database.php
+//
+// 2. Edita los valores segun tu entorno (XAMPP por defecto):
+// ============================================================
+
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'kbeauty_db');
+define('DB_USER', 'root');
+define('DB_PASS', '');        // En XAMPP por defecto es vacio
+define('DB_CHARSET', 'utf8mb4');

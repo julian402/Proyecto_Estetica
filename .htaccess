@@ -1,0 +1,47 @@
+# ============================================================
+# Seguridad - Hanul Beauty
+# ============================================================
+
+# Evitar listado de directorios
+Options -Indexes
+
+# Activar motor de reescritura
+RewriteEngine On
+
+# ---- Bloquear acceso HTTP a carpetas internas ----
+RewriteRule ^config/ - [F,L]
+RewriteRule ^includes/ - [F,L]
+RewriteRule ^models/ - [F,L]
+RewriteRule ^sql/ - [F,L]
+RewriteRule ^templates/ - [F,L]
+
+# ---- Bloquear archivos sensibles ----
+<FilesMatch "(\.example|\.sql|\.log|\.md)$">
+    Require all denied
+</FilesMatch>
+
+<Files .htaccess>
+    Require all denied
+</Files>
+
+<Files .gitignore>
+    Require all denied
+</Files>
+
+# ---- Headers de seguridad ----
+<IfModule mod_headers.c>
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # Prevenir MIME-type sniffing
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Proteccion XSS del navegador
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # Controlar informacion del referer
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # No exponer version de PHP
+    Header always unset X-Powered-By
+</IfModule>
