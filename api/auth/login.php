@@ -55,6 +55,7 @@ json_response([
         'id'    => $user['id_usuario'],
         'name'  => $user['nombre'],
         'email' => $user['correo'],
+        'role'  => (int) $user['id_rol'],
     ],
     'csrf_token' => $_SESSION['csrf_token'],
 ]);

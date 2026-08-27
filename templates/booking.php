@@ -31,6 +31,28 @@
           <form class="booking__form" id="bookingForm">
             <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
 
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" for="bookNombre">Nombre completo</label>
+                <input type="text" class="form-input" id="bookNombre" name="nombre" required
+                       placeholder="Tu nombre"
+                       <?php if ($currentUser): ?>value="<?php echo sanitize($currentUser['nombre']); ?>"<?php endif; ?>>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="bookTelefono">Telefono</label>
+                <input type="tel" class="form-input" id="bookTelefono" name="telefono"
+                       placeholder="300 123 4567"
+                       <?php if ($currentUser && !empty($currentUser['telefono'])): ?>value="<?php echo sanitize($currentUser['telefono']); ?>"<?php endif; ?>>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="bookCorreo">Correo electronico</label>
+              <input type="email" class="form-input" id="bookCorreo" name="correo" required
+                     placeholder="tu@correo.com"
+                     <?php if ($currentUser): ?>value="<?php echo sanitize($currentUser['correo']); ?>"<?php endif; ?>>
+            </div>
+
             <div class="form-group">
               <label class="form-label" for="tratamiento">Tratamiento</label>
               <select class="form-select" id="tratamiento" name="servicio_id">
@@ -52,13 +74,7 @@
               <div class="form-group">
                 <label class="form-label" for="hora">Hora</label>
                 <select class="form-select" id="hora" name="time">
-                  <option>10:00 am</option>
-                  <option>11:00 am</option>
-                  <option>12:00 pm</option>
-                  <option>2:00 pm</option>
-                  <option>3:00 pm</option>
-                  <option>4:00 pm</option>
-                  <option>5:00 pm</option>
+                  <option value="">Selecciona fecha primero</option>
                 </select>
               </div>
             </div>

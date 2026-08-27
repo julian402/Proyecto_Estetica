@@ -15,9 +15,13 @@
                 <span class="user-menu__name"><?php echo sanitize($currentUser['nombre']); ?></span>
                 <div class="user-menu__divider"></div>
               <?php endif; ?>
-              <button class="user-menu__item">Mis citas</button>
-              <button class="user-menu__item">Mi perfil</button>
-              <button class="user-menu__item">Tratamientos favoritos</button>
+              <?php if ($currentUser && in_array((int) $currentUser['id_rol'], [2, 3, 4])): ?>
+                <a href="dashboard.php" class="user-menu__item" style="text-decoration:none; display:block;">Panel de Reservas</a>
+              <?php else: ?>
+                <button class="user-menu__item" data-open-modal="citasModal" id="openCitasBtn">Mis citas</button>
+                <button class="user-menu__item" data-open-modal="perfilModal" id="openPerfilBtn">Mi perfil</button>
+                <button class="user-menu__item" data-open-modal="favoritosModal" id="openFavoritosBtn">Tratamientos favoritos</button>
+              <?php endif; ?>
               <div class="user-menu__divider"></div>
               <button class="user-menu__item" id="logoutBtn">Cerrar sesion</button>
             </div>

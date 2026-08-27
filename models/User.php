@@ -35,6 +35,23 @@ class User {
         return (int) $db->lastInsertId();
     }
 
+    public static function findByEmailAny(string $email): ?array {
+        $db = getDB();
+        $stmt = $db->prepare('SELECT * FROM usuarios WHERE correo = :correo LIMIT 1');
+        $stmt->execute(['correo' => $email]);
+        $user = $stmt->fetch();
+        return $user ?: null;
+    }
+
+    public static function findOrCreateGuest(string $name, string $email, ?string $telefono = null): int {
+        $existing = self::findByEmailAny($email);
+        if ($existing) {
+            return (int) $existing['id_usuario'];
+        }
+        $randomPass = bin2hex(random_bytes(16));
+        return self::create($name, $email, $randomPass, $telefono);
+    }
+
     /**
      * Busca un usuario por ID.
      */

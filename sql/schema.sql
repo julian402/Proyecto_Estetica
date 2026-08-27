@@ -182,7 +182,20 @@ CREATE TABLE logs_auditoria (
 CREATE INDEX idx_logs_usuario ON logs_auditoria(id_usuario);
 
 -- ============================================================
--- 9. DATOS SEMILLA (seed data)
+-- 9. FAVORITOS
+-- ============================================================
+CREATE TABLE favoritos (
+    id_favorito    INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario     INT NOT NULL,
+    id_servicio    INT NOT NULL,
+    creado_en      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_favorito (id_usuario, id_servicio),
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
+    FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ============================================================
+-- 10. DATOS SEMILLA (seed data)
 -- ============================================================
 INSERT INTO roles (nombre_rol) VALUES
   ('Cliente'), ('SuperAdmin'), ('Recepcionista'), ('Esteticista');

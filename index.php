@@ -5,8 +5,13 @@ require_once __DIR__ . '/models/User.php';
 
 start_session();
 
+$currentUser = current_user();
+if ($currentUser && in_array((int) $currentUser['id_rol'], [2, 3, 4])) {
+    header('Location: dashboard.php');
+    exit;
+}
+
 // Datos para los templates
-$currentUser  = current_user();
 $treatments   = Treatment::getAll();
 $esteticistas = User::getEsteticistas();
 
