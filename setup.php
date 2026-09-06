@@ -140,8 +140,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'insta
     if ($messageType !== 'error' && (!filter_var($adminEmail, FILTER_VALIDATE_EMAIL) || strlen($adminEmail) > 150)) {
         $message = 'Ingresa un correo valido para el administrador.';
         $messageType = 'error';
-    } elseif ($messageType !== 'error' && (strlen($adminPassword) < 12 || strlen($adminPassword) > 128)) {
-        $message = 'La clave del administrador debe tener entre 12 y 128 caracteres.';
+    } elseif ($messageType !== 'error' && (strlen($adminPassword) < 8 || strlen($adminPassword) > 128)) {
+        $message = 'La clave del administrador debe tener entre 8 y 128 caracteres.';
         $messageType = 'error';
     } elseif ($messageType !== 'error' && !hash_equals($adminPassword, $adminConfirm)) {
         $message = 'Las claves del administrador no coinciden.';
@@ -156,10 +156,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'insta
 
         if (empty($errors)) {
             try {
-                $hash = password_hash($adminPassword, PASSWORD_DEFAULT);
+                $hash = password_hash($adminPassword, PASSWORD_BCRYPT);
                 $stmt = $pdo->prepare(
-                    'INSERT INTO usuarios (id_rol, nombre, correo, password_hash, estado_cuenta)
-                     VALUES (2, :nombre, :correo, :password_hash, 1)'
+                    'INSERT INTO usuarios (id_rol, nombre, correo, password_hash, es_invitado, estado_cuenta)
+                     VALUES (2, :nombre, :correo, :password_hash, 0, 1)
+                     ON DUPLICATE KEY UPDATE
+                       id_rol = 2,
+                       nombre = VALUES(nombre),
+                       password_hash = VALUES(password_hash),
+                       es_invitado = 0,
+                       estado_cuenta = 1'
                 );
                 $stmt->execute([
                     'nombre' => 'Admin Principal',
@@ -499,13 +505,13 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
         <div class="form-group">
           <label class="form-label" for="admin_password">Clave inicial del administrador</label>
           <input type="password" class="form-input" id="admin_password" name="admin_password"
-                 minlength="12" maxlength="128" autocomplete="new-password" required>
-          <p class="form-hint">Minimo 12 caracteres. Solo se guardara el hash.</p>
+                 minlength="8" maxlength="128" autocomplete="new-password" required>
+          <p class="form-hint">Minimo 8 caracteres. Solo se guardara el hash.</p>
         </div>
         <div class="form-group">
           <label class="form-label" for="admin_password_confirm">Confirmar clave</label>
           <input type="password" class="form-input" id="admin_password_confirm"
-                 name="admin_password_confirm" minlength="12" maxlength="128"
+                 name="admin_password_confirm" minlength="8" maxlength="128"
                  autocomplete="new-password" required>
         </div>
         <button type="submit" class="btn btn--primary"

@@ -1,18 +1,42 @@
 (function() {
   'use strict';
 
-  var csrfToken = document.getElementById('dashCsrf').value;
-  var tbody = document.getElementById('reservasBody');
+  // Elementos base
+  var csrfToken       = document.getElementById('dashCsrf') ? document.getElementById('dashCsrf').value : '';
+  var currentUserRole = document.getElementById('currentUserRole') ? parseInt(document.getElementById('currentUserRole').value, 10) : 0;
+  var currentUserId   = document.getElementById('currentUserId') ? parseInt(document.getElementById('currentUserId').value, 10) : 0;
+  var tbody           = document.getElementById('reservasBody');
 
+  // Estados de reserva
   var estadoClasses = {
     'Pendiente': 'pendiente', 'Confirmada': 'confirmada', 'Completada': 'completada',
-    'Cancelada': 'cancelada', 'Reasignada': 'reasignada', 'No_Show': 'no_show'
+    'Cancelada': 'cancelada', 'Reasignada': 'reasignada', 'No_Show': 'no_show', 'No Show': 'no_show'
   };
 
   var estadoNames = ['', 'Pendiente', 'Confirmada', 'Completada', 'Cancelada', 'Reasignada', 'No Show'];
 
+  // Pila Undo / Redo (Tarea 3)
+  var undoStack = [];
+  var redoStack = [];
+
+  // ============================================================
+  // UTILIDADES
+  // ============================================================
+  function escHtml(str) {
+    if (str === null || str === undefined) return '';
+    var div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+  }
+
+  function formatMoney(amount) {
+    return '$' + Number(amount || 0).toLocaleString('es-CO');
+  }
+
   function showToast(msg, type) {
     var container = document.getElementById('toastContainer');
+    if (!container) return;
+
     var toast = document.createElement('div');
     toast.className = 'toast toast--' + (type || 'info');
 
@@ -40,73 +64,239 @@
     setTimeout(dismiss, 4500);
   }
 
-  function escHtml(str) {
-    var div = document.createElement('div');
-    div.textContent = str || '';
-    return div.innerHTML;
+  // ============================================================
+  // TAREA 16: MODO OSCURO (DARK MODE)
+  // ============================================================
+  var themeToggleBtn  = document.getElementById('themeToggleBtn');
+  var themeToggleText = document.getElementById('themeToggleText');
+
+  function applyTheme(theme) {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark-mode');
+      document.body.classList.add('dark-mode');
+      if (themeToggleText) themeToggleText.textContent = 'Modo Claro';
+      if (themeToggleBtn) {
+        themeToggleBtn.setAttribute('title', 'Cambiar a Modo Claro');
+        themeToggleBtn.setAttribute('aria-label', 'Cambiar a Modo Claro');
+      }
+    } else {
+      document.documentElement.classList.remove('dark-mode');
+      document.body.classList.remove('dark-mode');
+      if (themeToggleText) themeToggleText.textContent = 'Modo Oscuro';
+      if (themeToggleBtn) {
+        themeToggleBtn.setAttribute('title', 'Cambiar a Modo Oscuro');
+        themeToggleBtn.setAttribute('aria-label', 'Cambiar a Modo Oscuro');
+      }
+    }
+  }
+
+  // Inicializar tema desde localStorage
+  var savedTheme = localStorage.getItem('admin_theme') || 'light';
+  applyTheme(savedTheme);
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', function() {
+      var isDark = document.documentElement.classList.contains('dark-mode');
+      var newTheme = isDark ? 'light' : 'dark';
+      localStorage.setItem('admin_theme', newTheme);
+      applyTheme(newTheme);
+      showToast(newTheme === 'dark' ? 'Modo Oscuro activado' : 'Modo Claro activado', 'info');
+    });
+  }
+
+  // ============================================================
+  // GESTIÓN DE MODALES
+  // ============================================================
+  function openModal(modalId) {
+    var modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.add('modal--open');
+      var firstInput = modal.querySelector('input:not([type=hidden]), select, textarea');
+      if (firstInput) firstInput.focus();
+    }
+  }
+
+  function closeModal(modal) {
+    if (typeof modal === 'string') {
+      modal = document.getElementById(modal);
+    }
+    if (modal) {
+      modal.classList.remove('modal--open');
+    }
+  }
+
+  // Delegar cierre de modales con botones data-close-modal o clic en backdrop
+  document.addEventListener('click', function(e) {
+    if (e.target.matches('[data-close-modal]') || e.target.closest('[data-close-modal]')) {
+      var modal = e.target.closest('.modal');
+      if (modal) closeModal(modal);
+    } else if (e.target.classList.contains('modal')) {
+      closeModal(e.target);
+    }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      var openM = document.querySelector('.modal.modal--open');
+      if (openM) closeModal(openM);
+    }
+  });
+
+  // ============================================================
+  // CARGA Y FILTRADO DE RESERVAS (Tareas 18, 8 y 23)
+  // ============================================================
+  function updateCounters(stats) {
+    if (!stats) return;
+    var total = 0;
+    for (var k in stats) {
+      if (stats.hasOwnProperty(k)) total += parseInt(stats[k], 10);
+    }
+    var statTotal = document.getElementById('statTotal');
+    var statPend = document.getElementById('statPendiente');
+    var statConf = document.getElementById('statConfirmada');
+    var statComp = document.getElementById('statCompletada');
+
+    if (statTotal) statTotal.textContent = total;
+    if (statPend)  statPend.textContent = stats['Pendiente'] || 0;
+    if (statConf)  statConf.textContent = stats['Confirmada'] || 0;
+    if (statComp)  statComp.textContent = stats['Completada'] || 0;
   }
 
   function loadReservas() {
     var params = new URLSearchParams();
-    var fecha = document.getElementById('filterFecha').value;
-    var estado = document.getElementById('filterEstado').value;
-    var esteticista = document.getElementById('filterEsteticista').value;
+    var fechaEl = document.getElementById('filterFecha');
+    var estadoEl = document.getElementById('filterEstado');
+    var servicioEl = document.getElementById('filterServicio');
+    var esteticistaEl = document.getElementById('filterEsteticista');
 
-    if (fecha) params.set('fecha', fecha);
-    if (estado) params.set('estado', estado);
+    var fecha       = fechaEl ? fechaEl.value : '';
+    var estado      = estadoEl ? estadoEl.value : '';
+    var servicio    = servicioEl ? servicioEl.value : '';
+    var esteticista = esteticistaEl ? esteticistaEl.value : '';
+
+    if (fecha)       params.set('fecha', fecha);
+    if (estado)      params.set('estado', estado);
+    if (servicio)    params.set('servicio', servicio);
     if (esteticista) params.set('esteticista', esteticista);
 
-    var url = 'api/appointments/all.php' + (params.toString() ? '?' + params : '');
+    tbody.innerHTML = '<tr><td colspan="9" class="dashboard__empty">Cargando reservas...</td></tr>';
+
+    var url = 'api/appointments/all.php' + (params.toString() ? '?' + params.toString() : '');
 
     fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data.success) {
-          tbody.innerHTML = '<tr><td colspan="8" class="dashboard__empty">' + escHtml(data.error || 'Error') + '</td></tr>';
+          tbody.innerHTML = '<tr><td colspan="9" class="dashboard__empty">' + escHtml(data.error || 'Error al cargar reservas') + '</td></tr>';
           return;
         }
 
-        if (data.reservas.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" class="dashboard__empty">No hay reservas con estos filtros</td></tr>';
+        if (data.stats) {
+          updateCounters(data.stats);
+        }
+
+        if (!data.reservas || data.reservas.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="9" class="dashboard__empty">No se encontraron reservas con los filtros seleccionados</td></tr>';
           return;
         }
 
         tbody.innerHTML = data.reservas.map(function(r) {
-          var fechaInicio = new Date(r.fecha_hora_inicio);
-          var fechaStr = fechaInicio.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
-          var horaStr = fechaInicio.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
-          var cls = estadoClasses[r.nombre_estado] || 'pendiente';
+          var fechaInicio = new Date(r.fecha_hora_inicio.replace(/-/g, '/'));
+          var fechaStr = isNaN(fechaInicio.getTime()) ? r.fecha_hora_inicio :
+            fechaInicio.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+          var horaStr = isNaN(fechaInicio.getTime()) ? '' :
+            fechaInicio.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-          var selectHtml = '<select class="dashboard__status-select" data-reserva="' + r.id_reserva + '">';
+          var cls = estadoClasses[r.nombre_estado] || 'pendiente';
+          var estadoId = parseInt(r.id_estado, 10);
+
+          var selectHtml = '<select class="dashboard__status-select" data-reserva="' + r.id_reserva + '" data-previous="' + estadoId + '">';
           for (var i = 1; i <= 6; i++) {
-            selectHtml += '<option value="' + i + '"' + (r.id_estado == i ? ' selected' : '') + '>' + estadoNames[i] + '</option>';
+            selectHtml += '<option value="' + i + '"' + (estadoId === i ? ' selected' : '') + '>' + estadoNames[i] + '</option>';
           }
           selectHtml += '</select>';
 
-          return '<tr>' +
-            '<td>' + r.id_reserva + '</td>' +
-            '<td>' + escHtml(r.nombre_cliente) + '<br><small style="color:#999">' + escHtml(r.correo_cliente) + '</small></td>' +
-            '<td>' + escHtml(r.nombre_servicio) + '</td>' +
+          var telInfo = r.telefono_cliente ? '<br><small style="color:#888;">📞 ' + escHtml(r.telefono_cliente) + '</small>' : '';
+
+          // Tarea 23: Botón para reprogramar cita en cada fila activa
+          var canReschedule = (estadoId === 1 || estadoId === 2 || estadoId === 5);
+          var reprogBtn = canReschedule ?
+            '<button type="button" class="btn btn--outline btn--xs btn-reprogramar" ' +
+              'data-id="' + r.id_reserva + '" ' +
+              'data-servicio-id="' + r.id_servicio + '" ' +
+              'data-servicio-nombre="' + escHtml(r.nombre_servicio) + '" ' +
+              'data-esteticista-id="' + r.id_esteticista + '" ' +
+              'data-esteticista-nombre="' + escHtml(r.nombre_esteticista) + '" ' +
+              'data-cliente="' + escHtml(r.nombre_cliente) + '" ' +
+              'data-fecha="' + r.fecha_hora_inicio.substring(0, 10) + '" ' +
+              'title="Reprogramar fecha u hora">' +
+              '🗓 Reprogramar' +
+            '</button>' :
+            '<span style="color:#aaa; font-size:0.75rem;">—</span>';
+
+          return '<tr data-reserva-row="' + r.id_reserva + '">' +
+            '<td><strong>#' + r.id_reserva + '</strong></td>' +
+            '<td>' + escHtml(r.nombre_cliente) + '<br><small style="color:#888;">' + escHtml(r.correo_cliente) + '</small>' + telInfo + '</td>' +
+            '<td>' + escHtml(r.nombre_servicio) + '<br><small style="color:#888;">' + formatMoney(r.precio) + '</small></td>' +
             '<td>' + escHtml(r.nombre_esteticista) + '</td>' +
             '<td>' + fechaStr + '</td>' +
             '<td>' + horaStr + '</td>' +
             '<td><span class="status-badge status-badge--' + cls + '">' + escHtml(r.nombre_estado) + '</span></td>' +
             '<td>' + selectHtml + '</td>' +
+            '<td>' + reprogBtn + '</td>' +
           '</tr>';
         }).join('');
 
+        // Listeners para cambio de estado en el select
         tbody.querySelectorAll('.dashboard__status-select').forEach(function(sel) {
+          sel.addEventListener('focus', function() {
+            this.dataset.previous = this.value;
+          });
+
           sel.addEventListener('change', function() {
-            updateStatus(parseInt(sel.dataset.reserva), parseInt(sel.value));
+            var rId = parseInt(this.dataset.reserva, 10);
+            var oldVal = parseInt(this.dataset.previous, 10);
+            var newVal = parseInt(this.value, 10);
+
+            if (oldVal !== newVal) {
+              updateStatusWithUndo(rId, oldVal, newVal);
+            }
           });
         });
+
+        // Listeners para botones de Reprogramar (Tarea 23)
+        tbody.querySelectorAll('.btn-reprogramar').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            openReprogramarModal({
+              id: this.dataset.id,
+              servicioId: this.dataset.servicioId,
+              servicioNombre: this.dataset.servicioNombre,
+              esteticistaId: this.dataset.esteticistaId,
+              esteticistaNombre: this.dataset.esteticistaNombre,
+              cliente: this.dataset.cliente,
+              fecha: this.dataset.fecha
+            });
+          });
+        });
+
       })
-      .catch(function() {
-        tbody.innerHTML = '<tr><td colspan="8" class="dashboard__empty">Error de conexion</td></tr>';
+      .catch(function(err) {
+        tbody.innerHTML = '<tr><td colspan="9" class="dashboard__empty">Error de conexión al cargar reservas</td></tr>';
       });
   }
 
-  function updateStatus(reservaId, estadoId) {
+  // ============================================================
+  // PILA DESHACER / REHACER (UNDO / REDO) - TAREA 3
+  // ============================================================
+  var btnUndo = document.getElementById('btnUndo');
+  var btnRedo = document.getElementById('btnRedo');
+
+  function updateUndoRedoButtons() {
+    if (btnUndo) btnUndo.disabled = (undoStack.length === 0);
+    if (btnRedo) btnRedo.disabled = (redoStack.length === 0);
+  }
+
+  function updateStatus(reservaId, estadoId, callback) {
     fetch('api/appointments/update-status.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -115,30 +305,1082 @@
     .then(function(r) { return r.json(); })
     .then(function(data) {
       if (data.success) {
-        showToast(data.message, 'success');
         loadReservas();
+        if (callback) callback(null, data);
       } else {
         showToast(data.error || 'Error al actualizar', 'error');
+        if (callback) callback(new Error(data.error));
       }
     })
-    .catch(function() {
-      showToast('Error de conexion', 'error');
+    .catch(function(err) {
+      showToast('Error de conexión', 'error');
+      if (callback) callback(err);
     });
   }
 
-  document.getElementById('filterFecha').addEventListener('change', loadReservas);
-  document.getElementById('filterEstado').addEventListener('change', loadReservas);
-  document.getElementById('filterEsteticista').addEventListener('change', loadReservas);
+  function updateStatusWithUndo(reservaId, oldEstado, newEstado) {
+    updateStatus(reservaId, newEstado, function(err, data) {
+      if (!err) {
+        undoStack.push({ reservaId: reservaId, oldEstado: oldEstado, newEstado: newEstado });
+        redoStack = []; // Se vacía el historial de rehacer al haber una nueva acción
+        updateUndoRedoButtons();
+        showToast('Estado cambiado a ' + estadoNames[newEstado], 'success');
+      }
+    });
+  }
 
-  document.getElementById('dashLogoutBtn').addEventListener('click', function() {
-    fetch('api/auth/logout.php', {
+  if (btnUndo) {
+    btnUndo.addEventListener('click', function() {
+      if (undoStack.length === 0) return;
+      var action = undoStack.pop();
+      updateStatus(action.reservaId, action.oldEstado, function(err) {
+        if (!err) {
+          redoStack.push(action);
+          updateUndoRedoButtons();
+          showToast('Deshecho: Reserva #' + action.reservaId + ' revertida a ' + estadoNames[action.oldEstado], 'info');
+        } else {
+          undoStack.push(action); // Recuperar si falló
+        }
+      });
+    });
+  }
+
+  if (btnRedo) {
+    btnRedo.addEventListener('click', function() {
+      if (redoStack.length === 0) return;
+      var action = redoStack.pop();
+      updateStatus(action.reservaId, action.newEstado, function(err) {
+        if (!err) {
+          undoStack.push(action);
+          updateUndoRedoButtons();
+          showToast('Rehecho: Reserva #' + action.reservaId + ' cambiada a ' + estadoNames[action.newEstado], 'success');
+        } else {
+          redoStack.push(action); // Recuperar si falló
+        }
+      });
+    });
+  }
+
+  // ============================================================
+  // FILTROS DE LA TABLA
+  // ============================================================
+  var filterFecha = document.getElementById('filterFecha');
+  var filterEstado = document.getElementById('filterEstado');
+  var filterServicio = document.getElementById('filterServicio');
+  var filterEsteticista = document.getElementById('filterEsteticista');
+  var btnResetFilters = document.getElementById('btnResetFilters');
+
+  if (filterFecha)       filterFecha.addEventListener('change', loadReservas);
+  if (filterEstado)      filterEstado.addEventListener('change', loadReservas);
+  if (filterServicio)    filterServicio.addEventListener('change', loadReservas);
+  if (filterEsteticista && filterEsteticista.tagName === 'SELECT') {
+    filterEsteticista.addEventListener('change', loadReservas);
+  }
+
+  if (btnResetFilters) {
+    btnResetFilters.addEventListener('click', function() {
+      if (filterFecha) filterFecha.value = '';
+      if (filterEstado) filterEstado.value = '';
+      if (filterServicio) filterServicio.value = '';
+      if (filterEsteticista && filterEsteticista.tagName === 'SELECT') {
+        filterEsteticista.value = '';
+      }
+      loadReservas();
+      showToast('Filtros restablecidos', 'info');
+    });
+  }
+
+  // ============================================================
+  // MODAL: REPROGRAMAR CITA (TAREA 23)
+  // ============================================================
+  var modalReprog       = document.getElementById('modalReprogramar');
+  var formReprog        = document.getElementById('formReprogramar');
+  var reprogReservaId   = document.getElementById('reprogReservaId');
+  var reprogServicioId  = document.getElementById('reprogServicioId');
+  var reprogEspecialista= document.getElementById('reprogEspecialista');
+  var reprogFecha       = document.getElementById('reprogFecha');
+  var reprogHora        = document.getElementById('reprogHora');
+  var reprogSummaryBox  = document.getElementById('reprogSummaryBox');
+  var reprogError       = document.getElementById('reprogError');
+  var reprogSlotsHelp   = document.getElementById('reprogSlotsHelp');
+
+  function openReprogramarModal(data) {
+    if (!modalReprog) return;
+    reprogReservaId.value  = data.id;
+    reprogServicioId.value = data.servicioId;
+    
+    if (reprogEspecialista) {
+      reprogEspecialista.value = data.esteticistaId;
+    }
+
+    if (reprogFecha) {
+      reprogFecha.value = data.fecha || new Date().toISOString().substring(0, 10);
+    }
+
+    if (reprogSummaryBox) {
+      reprogSummaryBox.innerHTML = '<strong>Cita #' + data.id + '</strong> — Cliente: <em>' + data.cliente + '</em><br>' +
+        'Tratamiento: <strong>' + data.servicioNombre + '</strong><br>' +
+        'Especialista actual: <strong>' + data.esteticistaNombre + '</strong>';
+    }
+
+    if (reprogError) {
+      reprogError.style.display = 'none';
+      reprogError.textContent = '';
+    }
+
+    openModal('modalReprogramar');
+    fetchAvailableSlotsForReprog();
+  }
+
+  function fetchAvailableSlotsForReprog() {
+    if (!reprogServicioId || !reprogFecha || !reprogHora) return;
+    var servId = reprogServicioId.value;
+    var fecha  = reprogFecha.value;
+    var estId  = reprogEspecialista ? reprogEspecialista.value : '';
+
+    if (!servId || !fecha) return;
+
+    reprogHora.innerHTML = '<option value="">Consultando horarios...</option>';
+    if (reprogSlotsHelp) reprogSlotsHelp.textContent = 'Buscando horarios disponibles sin conflictos...';
+
+    var url = 'api/appointments/availability.php?service_id=' + encodeURIComponent(servId) +
+              '&date=' + encodeURIComponent(fecha) +
+              (estId ? '&esteticista_id=' + encodeURIComponent(estId) : '');
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success || !data.available_slots || data.available_slots.length === 0) {
+          reprogHora.innerHTML = '<option value="">No hay horarios disponibles en esta fecha</option>';
+          if (reprogSlotsHelp) reprogSlotsHelp.textContent = 'Prueba con otra fecha u otro especialista.';
+          return;
+        }
+
+        reprogHora.innerHTML = '<option value="">Selecciona un horario...</option>' +
+          data.available_slots.map(function(slot) {
+            return '<option value="' + escHtml(slot) + '">' + escHtml(slot) + '</option>';
+          }).join('');
+
+        if (reprogSlotsHelp) reprogSlotsHelp.textContent = data.available_slots.length + ' turnos disponibles.';
+      })
+      .catch(function() {
+        reprogHora.innerHTML = '<option value="">Error al cargar horarios</option>';
+      });
+  }
+
+  if (reprogFecha) {
+    reprogFecha.addEventListener('change', fetchAvailableSlotsForReprog);
+  }
+  if (reprogEspecialista) {
+    reprogEspecialista.addEventListener('change', fetchAvailableSlotsForReprog);
+  }
+
+  if (formReprog) {
+    formReprog.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var rId   = parseInt(reprogReservaId.value, 10);
+      var fecha = reprogFecha.value;
+      var hora  = reprogHora.value;
+      var estId = reprogEspecialista ? parseInt(reprogEspecialista.value, 10) : null;
+
+      if (!rId || !fecha || !hora) {
+        reprogError.textContent = 'Selecciona una fecha y un horario disponible';
+        reprogError.style.display = 'block';
+        return;
+      }
+
+      var btnSub = document.getElementById('btnSubmitReprog');
+      if (btnSub) { btnSub.disabled = true; btnSub.textContent = 'Reprogramando...'; }
+
+      fetch('api/appointments/reschedule.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reserva_id: rId,
+          nueva_fecha: fecha,
+          nueva_hora: hora,
+          id_esteticista: estId,
+          csrf_token: csrfToken
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (btnSub) { btnSub.disabled = false; btnSub.textContent = 'Confirmar Reprogramación'; }
+        if (res.success) {
+          showToast(res.message || 'Cita reprogramada con éxito', 'success');
+          closeModal('modalReprogramar');
+          loadReservas();
+        } else {
+          reprogError.textContent = res.error || 'Error al reprogramar la cita';
+          reprogError.style.display = 'block';
+        }
+      })
+      .catch(function() {
+        if (btnSub) { btnSub.disabled = false; btnSub.textContent = 'Confirmar Reprogramación'; }
+        reprogError.textContent = 'Error de conexión con el servidor';
+        reprogError.style.display = 'block';
+      });
+    });
+  }
+
+  // ============================================================
+  // MODAL: NUEVA CITA TELEFÓNICA (RECEPCIÓN - HU11)
+  // ============================================================
+  var btnOpenNuevaCita = document.getElementById('btnOpenNuevaCita');
+  var formNuevaCita    = document.getElementById('formNuevaCita');
+  var ncServicio       = document.getElementById('ncServicio');
+  var ncEspecialista   = document.getElementById('ncEspecialista');
+  var ncFecha          = document.getElementById('ncFecha');
+  var ncHora           = document.getElementById('ncHora');
+  var ncError          = document.getElementById('ncError');
+
+  if (btnOpenNuevaCita) {
+    btnOpenNuevaCita.addEventListener('click', function() {
+      if (formNuevaCita) formNuevaCita.reset();
+      if (ncError) ncError.style.display = 'none';
+      if (ncFecha) ncFecha.value = new Date().toISOString().substring(0, 10);
+      openModal('modalNuevaCita');
+      fetchAvailableSlotsForNuevaCita();
+    });
+  }
+
+  function fetchAvailableSlotsForNuevaCita() {
+    if (!ncServicio || !ncFecha || !ncHora) return;
+    var servId = ncServicio.value;
+    var fecha  = ncFecha.value;
+    var estId  = ncEspecialista ? ncEspecialista.value : '';
+
+    if (!servId || !fecha) {
+      ncHora.innerHTML = '<option value="">Selecciona servicio y fecha primero</option>';
+      return;
+    }
+
+    ncHora.innerHTML = '<option value="">Consultando disponibilidad...</option>';
+
+    var url = 'api/appointments/availability.php?service_id=' + encodeURIComponent(servId) +
+              '&date=' + encodeURIComponent(fecha) +
+              (estId ? '&esteticista_id=' + encodeURIComponent(estId) : '');
+
+    fetch(url)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success || !data.available_slots || data.available_slots.length === 0) {
+          ncHora.innerHTML = '<option value="">Sin turnos disponibles en esta fecha</option>';
+          return;
+        }
+        ncHora.innerHTML = '<option value="">Selecciona horario...</option>' +
+          data.available_slots.map(function(s) {
+            return '<option value="' + escHtml(s) + '">' + escHtml(s) + '</option>';
+          }).join('');
+      })
+      .catch(function() {
+        ncHora.innerHTML = '<option value="">Error al cargar turnos</option>';
+      });
+  }
+
+  if (ncServicio)     ncServicio.addEventListener('change', fetchAvailableSlotsForNuevaCita);
+  if (ncEspecialista) ncEspecialista.addEventListener('change', fetchAvailableSlotsForNuevaCita);
+  if (ncFecha)        ncFecha.addEventListener('change', fetchAvailableSlotsForNuevaCita);
+
+  if (formNuevaCita) {
+    formNuevaCita.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var nombre = document.getElementById('ncNombre').value.trim();
+      var correo = document.getElementById('ncCorreo').value.trim();
+      var tel    = document.getElementById('ncTelefono').value.trim();
+      var serv   = parseInt(ncServicio.value, 10);
+      var est    = ncEspecialista ? parseInt(ncEspecialista.value, 10) : 0;
+      var f      = ncFecha.value;
+      var h      = ncHora.value;
+
+      if (!nombre || !correo || !serv || !f || !h) {
+        ncError.textContent = 'Completa todos los campos obligatorios';
+        ncError.style.display = 'block';
+        return;
+      }
+
+      var btnSub = document.getElementById('btnSubmitNuevaCita');
+      if (btnSub) { btnSub.disabled = true; btnSub.textContent = 'Guardando cita...'; }
+
+      fetch('api/appointments/create.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: nombre,
+          correo: correo,
+          telefono: tel,
+          servicio_id: serv,
+          esteticista_id: est || 0,
+          date: f,
+          time: h,
+          csrf_token: csrfToken
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (btnSub) { btnSub.disabled = false; btnSub.textContent = 'Guardar y Confirmar Cita'; }
+        if (data.success) {
+          showToast('Cita creada exitosamente #' + data.reserva.id, 'success');
+          closeModal('modalNuevaCita');
+          loadReservas();
+        } else {
+          ncError.textContent = data.error || 'Error al agendar cita';
+          ncError.style.display = 'block';
+        }
+      })
+      .catch(function() {
+        if (btnSub) { btnSub.disabled = false; btnSub.textContent = 'Guardar y Confirmar Cita'; }
+        ncError.textContent = 'Error de conexión con el servidor';
+        ncError.style.display = 'block';
+      });
+    });
+  }
+
+  // ============================================================
+  // MODAL: BLOQUEO DE AGENDA / BREAKS (HU13)
+  // ============================================================
+  var btnOpenBloqueo     = document.getElementById('btnOpenBloqueo');
+  var formBloqueo        = document.getElementById('formBloqueo');
+  var tablaBloqueosBody  = document.getElementById('tablaBloqueosBody');
+  var bloqError          = document.getElementById('bloqError');
+
+  function loadBloqueos() {
+    if (!tablaBloqueosBody) return;
+    tablaBloqueosBody.innerHTML = '<tr><td colspan="5" class="dashboard__empty">Cargando bloqueos...</td></tr>';
+
+    fetch('api/appointments/blocks.php')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success || !data.bloqueos || data.bloqueos.length === 0) {
+          tablaBloqueosBody.innerHTML = '<tr><td colspan="5" class="dashboard__empty">No hay bloqueos activos</td></tr>';
+          return;
+        }
+
+        tablaBloqueosBody.innerHTML = data.bloqueos.map(function(b) {
+          var inicio = new Date(b.fecha_hora_inicio.replace(/-/g, '/'));
+          var fin    = new Date(b.fecha_hora_fin.replace(/-/g, '/'));
+          var iniStr = isNaN(inicio.getTime()) ? b.fecha_hora_inicio : inicio.toLocaleString('es-CO', { dateStyle: 'short', timeStyle: 'short' });
+          var finStr = isNaN(fin.getTime()) ? b.fecha_hora_fin : fin.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+          return '<tr>' +
+            '<td><strong>' + escHtml(b.nombre_esteticista) + '</strong></td>' +
+            '<td>' + iniStr + '</td>' +
+            '<td>' + finStr + '</td>' +
+            '<td><span class="status-badge" style="background:#eee;color:#333;">' + escHtml(b.motivo) + '</span></td>' +
+            '<td><button type="button" class="btn btn--outline btn--xs btn-delete-block" data-id="' + b.id_bloqueo + '" style="color:#e74c3c;">✕ Quitar</button></td>' +
+          '</tr>';
+        }).join('');
+
+        tablaBloqueosBody.querySelectorAll('.btn-delete-block').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var bId = parseInt(this.dataset.id, 10);
+            if (confirm('¿Deseas desbloquear este horario?')) {
+              deleteBlock(bId);
+            }
+          });
+        });
+      })
+      .catch(function() {
+        tablaBloqueosBody.innerHTML = '<tr><td colspan="5" class="dashboard__empty">Error al cargar bloqueos</td></tr>';
+      });
+  }
+
+  function deleteBlock(bId) {
+    fetch('api/appointments/blocks.php', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ csrf_token: csrfToken })
+      body: JSON.stringify({ action: 'delete', id_bloqueo: bId, csrf_token: csrfToken })
     })
-    .then(function() { window.location.href = 'index.php'; })
-    .catch(function() { window.location.href = 'index.php'; });
-  });
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+      if (res.success) {
+        showToast('Bloqueo eliminado', 'success');
+        loadBloqueos();
+      } else {
+        showToast(res.error || 'Error al eliminar', 'error');
+      }
+    });
+  }
 
+  if (btnOpenBloqueo) {
+    btnOpenBloqueo.addEventListener('click', function() {
+      if (bloqError) bloqError.style.display = 'none';
+      openModal('modalBloqueo');
+      loadBloqueos();
+    });
+  }
+
+  if (formBloqueo) {
+    formBloqueo.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var estId   = parseInt(document.getElementById('bloqEspecialista').value, 10);
+      var fecha   = document.getElementById('bloqFecha').value;
+      var hInicio = document.getElementById('bloqHoraInicio').value;
+      var hFin    = document.getElementById('bloqHoraFin').value;
+      var motivo  = document.getElementById('bloqMotivo').value;
+
+      if (!estId || !fecha || !hInicio || !hFin) {
+        bloqError.textContent = 'Todos los campos son obligatorios';
+        bloqError.style.display = 'block';
+        return;
+      }
+
+      fetch('api/appointments/blocks.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          id_esteticista: estId,
+          fecha: fecha,
+          hora_inicio: hInicio,
+          hora_fin: hFin,
+          motivo: motivo,
+          csrf_token: csrfToken
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          showToast(res.message || 'Bloqueo registrado', 'success');
+          if (bloqError) bloqError.style.display = 'none';
+          loadBloqueos();
+        } else {
+          bloqError.textContent = res.error || 'Error al registrar bloqueo';
+          bloqError.style.display = 'block';
+        }
+      })
+      .catch(function() {
+        bloqError.textContent = 'Error de conexión';
+        bloqError.style.display = 'block';
+      });
+    });
+  }
+
+  // ============================================================
+  // MODAL: CONTINGENCIA DE ESTETICISTA (HU14)
+  // ============================================================
+  var btnOpenContingencia        = document.getElementById('btnOpenContingencia');
+  var btnConsultarContingencia   = document.getElementById('btnConsultarContingencia');
+  var contResultados             = document.getElementById('contResultados');
+  var contCitasBody              = document.getElementById('contCitasBody');
+  var contTotalAfectadas         = document.getElementById('contTotalAfectadas');
+  var contSelectAll              = document.getElementById('contSelectAll');
+  var btnReasignarLote           = document.getElementById('btnReasignarLote');
+  var btnCancelarLote            = document.getElementById('btnCancelarLote');
+  var btnBloquearDiaContingencia = document.getElementById('btnBloquearDiaContingencia');
+
+  if (btnOpenContingencia) {
+    btnOpenContingencia.addEventListener('click', function() {
+      openModal('modalContingencia');
+    });
+  }
+
+  function fetchContingencyAppointments() {
+    var estId = document.getElementById('contEsteticista').value;
+    var fecha = document.getElementById('contFecha').value;
+    if (!estId || !fecha) {
+      showToast('Selecciona especialista y fecha', 'warning');
+      return;
+    }
+
+    contCitasBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Consultando citas afectadas...</td></tr>';
+    contResultados.style.display = 'block';
+
+    fetch('api/admin/contingency.php?esteticista_id=' + encodeURIComponent(estId) + '&fecha=' + encodeURIComponent(fecha))
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) {
+          contCitasBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">' + escHtml(data.error) + '</td></tr>';
+          return;
+        }
+
+        contTotalAfectadas.textContent = data.total;
+
+        if (!data.reservas || data.reservas.length === 0) {
+          contCitasBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">No hay citas activas para este especialista en esta fecha</td></tr>';
+          return;
+        }
+
+        contCitasBody.innerHTML = data.reservas.map(function(r) {
+          var hora = r.fecha_hora_inicio.substring(11, 16);
+          return '<tr>' +
+            '<td><input type="checkbox" class="cont-checkbox" value="' + r.id_reserva + '"></td>' +
+            '<td>#' + r.id_reserva + '</td>' +
+            '<td>' + hora + '</td>' +
+            '<td>' + escHtml(r.nombre_cliente) + ' (' + escHtml(r.telefono_cliente || 'Sin tel') + ')</td>' +
+            '<td>' + escHtml(r.nombre_servicio) + '</td>' +
+            '<td><span class="status-badge status-badge--confirmada">' + escHtml(r.nombre_estado) + '</span></td>' +
+          '</tr>';
+        }).join('');
+      });
+  }
+
+  if (btnConsultarContingencia) {
+    btnConsultarContingencia.addEventListener('click', fetchContingencyAppointments);
+  }
+
+  if (contSelectAll) {
+    contSelectAll.addEventListener('change', function() {
+      var checks = contCitasBody.querySelectorAll('.cont-checkbox');
+      for (var i = 0; i < checks.length; i++) {
+        checks[i].checked = contSelectAll.checked;
+      }
+    });
+  }
+
+  function getSelectedContCheckboxes() {
+    var checks = contCitasBody.querySelectorAll('.cont-checkbox:checked');
+    var ids = [];
+    for (var i = 0; i < checks.length; i++) {
+      ids.push(parseInt(checks[i].value, 10));
+    }
+    return ids;
+  }
+
+  if (btnReasignarLote) {
+    btnReasignarLote.addEventListener('click', function() {
+      var ids = getSelectedContCheckboxes();
+      var newEstId = parseInt(document.getElementById('contNuevoEsteticista').value, 10);
+
+      if (ids.length === 0) {
+        showToast('Selecciona al menos una cita', 'warning');
+        return;
+      }
+      if (!newEstId) {
+        showToast('Selecciona el nuevo especialista destino', 'warning');
+        return;
+      }
+
+      fetch('api/admin/contingency.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'reassign_bulk',
+          reserva_ids: ids,
+          nuevo_esteticista_id: newEstId,
+          csrf_token: csrfToken
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          showToast(res.message, 'success');
+          fetchContingencyAppointments();
+          loadReservas();
+        } else {
+          showToast(res.error || 'Error al reasignar', 'error');
+        }
+      });
+    });
+  }
+
+  if (btnCancelarLote) {
+    btnCancelarLote.addEventListener('click', function() {
+      var ids = getSelectedContCheckboxes();
+      if (ids.length === 0) {
+        showToast('Selecciona al menos una cita', 'warning');
+        return;
+      }
+      if (confirm('¿Confirmas cancelar ' + ids.length + ' citas por contingencia?')) {
+        fetch('api/admin/contingency.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'cancel_bulk', reserva_ids: ids, csrf_token: csrfToken })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+          if (res.success) {
+            showToast(res.message, 'info');
+            fetchContingencyAppointments();
+            loadReservas();
+          } else {
+            showToast(res.error || 'Error al cancelar', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  if (btnBloquearDiaContingencia) {
+    btnBloquearDiaContingencia.addEventListener('click', function() {
+      var estId = document.getElementById('contEsteticista').value;
+      var fecha = document.getElementById('contFecha').value;
+      if (!estId || !fecha) return;
+
+      if (confirm('¿Deseas bloquear todo el día para este esteticista?')) {
+        fetch('api/admin/contingency.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'block_day',
+            id_esteticista: estId,
+            fecha: fecha,
+            motivo: 'Incapacidad / Ausencia de contingencia (HU14)',
+            csrf_token: csrfToken
+          })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+          if (res.success) {
+            showToast('Día bloqueado con éxito', 'success');
+          } else {
+            showToast(res.error || 'Error al bloquear día', 'error');
+          }
+        });
+      }
+    });
+  }
+
+  // ============================================================
+  // MODAL: GESTIÓN DE SERVICIOS (CRUD SUPERADMIN)
+  // ============================================================
+  var btnOpenServicios    = document.getElementById('btnOpenServicios');
+  var formServicioCrud    = document.getElementById('formServicioCrud');
+  var tablaServiciosBody  = document.getElementById('tablaServiciosBody');
+  var crudServicioId      = document.getElementById('crudServicioId');
+  var crudServicioTitle   = document.getElementById('crudServicioTitle');
+  var btnCancelServicioEdit = document.getElementById('btnCancelServicioEdit');
+
+  function loadServiciosCrud() {
+    if (!tablaServiciosBody) return;
+    tablaServiciosBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando catálogo...</td></tr>';
+
+    fetch('api/admin/services.php')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success || !data.servicios) return;
+
+        tablaServiciosBody.innerHTML = data.servicios.map(function(s) {
+          var actBadge = s.activo == 1 ?
+            '<span class="status-badge status-badge--confirmada">Activo</span>' :
+            '<span class="status-badge status-badge--cancelada">Inactivo</span>';
+
+          return '<tr>' +
+            '<td>#' + s.id_servicio + '</td>' +
+            '<td><strong>' + escHtml(s.nombre_servicio) + '</strong><br><small style="color:#888;">' + escHtml(s.nombre_categoria) + ' / ' + escHtml(s.nombre_subcategoria) + '</small></td>' +
+            '<td>' + s.duracion_minutos + ' min</td>' +
+            '<td>' + formatMoney(s.precio) + '</td>' +
+            '<td>' + actBadge + '</td>' +
+            '<td>' +
+              '<button type="button" class="btn btn--outline btn--xs btn-edit-serv" data-json=\'' + JSON.stringify(s) + '\'>✏️ Editar</button> ' +
+              '<button type="button" class="btn btn--outline btn--xs btn-toggle-serv" data-id="' + s.id_servicio + '">' + (s.activo == 1 ? 'Desactivar' : 'Activar') + '</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('');
+
+        tablaServiciosBody.querySelectorAll('.btn-edit-serv').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var s = JSON.parse(this.dataset.json);
+            crudServicioId.value = s.id_servicio;
+            document.getElementById('crudServNombre').value = s.nombre_servicio;
+            document.getElementById('crudServPrecio').value = s.precio;
+            document.getElementById('crudServDuracion').value = s.duracion_minutos;
+            document.getElementById('crudServSubcat').value = s.id_subcategoria;
+            document.getElementById('crudServDesc').value = s.descripcion || '';
+            crudServicioTitle.textContent = 'Editar Tratamiento #' + s.id_servicio;
+            btnCancelServicioEdit.style.display = 'inline-block';
+          });
+        });
+
+        tablaServiciosBody.querySelectorAll('.btn-toggle-serv').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var sId = parseInt(this.dataset.id, 10);
+            fetch('api/admin/services.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'toggle', id_servicio: sId, csrf_token: csrfToken })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+              if (res.success) {
+                showToast(res.message, 'success');
+                loadServiciosCrud();
+              }
+            });
+          });
+        });
+      });
+  }
+
+  if (btnOpenServicios) {
+    btnOpenServicios.addEventListener('click', function() {
+      openModal('modalServicios');
+      loadServiciosCrud();
+    });
+  }
+
+  if (btnCancelServicioEdit) {
+    btnCancelServicioEdit.addEventListener('click', function() {
+      formServicioCrud.reset();
+      crudServicioId.value = '';
+      crudServicioTitle.textContent = 'Nuevo Tratamiento';
+      btnCancelServicioEdit.style.display = 'none';
+    });
+  }
+
+  if (formServicioCrud) {
+    formServicioCrud.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var id = crudServicioId.value ? parseInt(crudServicioId.value, 10) : 0;
+      var payload = {
+        action: id ? 'update' : 'create',
+        id_servicio: id || undefined,
+        nombre_servicio: document.getElementById('crudServNombre').value.trim(),
+        precio: parseFloat(document.getElementById('crudServPrecio').value),
+        duracion_minutos: parseInt(document.getElementById('crudServDuracion').value, 10),
+        id_subcategoria: parseInt(document.getElementById('crudServSubcat').value, 10),
+        descripcion: document.getElementById('crudServDesc').value.trim(),
+        csrf_token: csrfToken
+      };
+
+      fetch('api/admin/services.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          showToast(res.message, 'success');
+          formServicioCrud.reset();
+          crudServicioId.value = '';
+          crudServicioTitle.textContent = 'Nuevo Tratamiento';
+          btnCancelServicioEdit.style.display = 'none';
+          loadServiciosCrud();
+        } else {
+          showToast(res.error || 'Error al guardar', 'error');
+        }
+      });
+    });
+  }
+
+  // ============================================================
+  // MODAL: GESTIÓN DE PERSONAL (CRUD SUPERADMIN)
+  // ============================================================
+  var btnOpenPersonal     = document.getElementById('btnOpenPersonal');
+  var formPersonalCrud    = document.getElementById('formPersonalCrud');
+  var tablaPersonalBody   = document.getElementById('tablaPersonalBody');
+  var crudStaffId         = document.getElementById('crudStaffId');
+  var crudStaffTitle      = document.getElementById('crudStaffTitle');
+  var btnCancelStaffEdit  = document.getElementById('btnCancelStaffEdit');
+  var passHelpText        = document.getElementById('passHelpText');
+
+  function loadPersonalCrud() {
+    if (!tablaPersonalBody) return;
+    tablaPersonalBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando empleados...</td></tr>';
+
+    fetch('api/admin/staff.php')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success || !data.staff) return;
+
+        tablaPersonalBody.innerHTML = data.staff.map(function(u) {
+          var actBadge = u.estado_cuenta == 1 ?
+            '<span class="status-badge status-badge--confirmada">Activo</span>' :
+            '<span class="status-badge status-badge--cancelada">Inactivo</span>';
+
+          var roleBadge = '<span class="user-pill__badge user-pill__badge--' + escHtml(u.nombre_rol.toLowerCase()) + '">' + escHtml(u.nombre_rol) + '</span>';
+
+          return '<tr>' +
+            '<td>#' + u.id_usuario + '</td>' +
+            '<td><strong>' + escHtml(u.nombre) + '</strong><br><small style="color:#888;">📞 ' + escHtml(u.telefono || 'Sin tel') + '</small></td>' +
+            '<td>' + escHtml(u.correo) + '</td>' +
+            '<td>' + roleBadge + '</td>' +
+            '<td>' + actBadge + '</td>' +
+            '<td>' +
+              '<button type="button" class="btn btn--outline btn--xs btn-edit-staff" data-json=\'' + JSON.stringify(u) + '\'>✏️ Editar</button> ' +
+              '<button type="button" class="btn btn--outline btn--xs btn-toggle-staff" data-id="' + u.id_usuario + '">' + (u.estado_cuenta == 1 ? 'Desactivar' : 'Activar') + '</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('');
+
+        tablaPersonalBody.querySelectorAll('.btn-edit-staff').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var u = JSON.parse(this.dataset.json);
+            crudStaffId.value = u.id_usuario;
+            document.getElementById('crudStaffNombre').value = u.nombre;
+            document.getElementById('crudStaffCorreo').value = u.correo;
+            document.getElementById('crudStaffRol').value = u.id_rol;
+            document.getElementById('crudStaffTelefono').value = u.telefono || '';
+            document.getElementById('crudStaffPassword').value = '';
+            crudStaffTitle.textContent = 'Editar Empleado #' + u.id_usuario;
+            passHelpText.textContent = '(dejar vacío para no cambiar)';
+            btnCancelStaffEdit.style.display = 'inline-block';
+          });
+        });
+
+        tablaPersonalBody.querySelectorAll('.btn-toggle-staff').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var uId = parseInt(this.dataset.id, 10);
+            fetch('api/admin/staff.php', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'toggle', id_usuario: uId, csrf_token: csrfToken })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(res) {
+              if (res.success) {
+                showToast(res.message, 'success');
+                loadPersonalCrud();
+              } else {
+                showToast(res.error || 'Error al cambiar estado', 'error');
+              }
+            });
+          });
+        });
+      });
+  }
+
+  if (btnOpenPersonal) {
+    btnOpenPersonal.addEventListener('click', function() {
+      openModal('modalPersonal');
+      loadPersonalCrud();
+    });
+  }
+
+  if (btnCancelStaffEdit) {
+    btnCancelStaffEdit.addEventListener('click', function() {
+      formPersonalCrud.reset();
+      crudStaffId.value = '';
+      crudStaffTitle.textContent = 'Nuevo Empleado';
+      passHelpText.textContent = '(requerida al crear)';
+      btnCancelStaffEdit.style.display = 'none';
+    });
+  }
+
+  if (formPersonalCrud) {
+    formPersonalCrud.addEventListener('submit', function(e) {
+      e.preventDefault();
+      var id = crudStaffId.value ? parseInt(crudStaffId.value, 10) : 0;
+      var pass = document.getElementById('crudStaffPassword').value;
+
+      if (!id && !pass) {
+        showToast('La contraseña es obligatoria para nuevo personal', 'warning');
+        return;
+      }
+
+      var payload = {
+        action: id ? 'update' : 'create',
+        id_usuario: id || undefined,
+        nombre: document.getElementById('crudStaffNombre').value.trim(),
+        correo: document.getElementById('crudStaffCorreo').value.trim(),
+        id_rol: parseInt(document.getElementById('crudStaffRol').value, 10),
+        telefono: document.getElementById('crudStaffTelefono').value.trim(),
+        password: pass || undefined,
+        csrf_token: csrfToken
+      };
+
+      fetch('api/admin/staff.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        if (res.success) {
+          showToast(res.message, 'success');
+          formPersonalCrud.reset();
+          crudStaffId.value = '';
+          crudStaffTitle.textContent = 'Nuevo Empleado';
+          passHelpText.textContent = '(requerida al crear)';
+          btnCancelStaffEdit.style.display = 'none';
+          loadPersonalCrud();
+        } else {
+          showToast(res.error || 'Error al guardar empleado', 'error');
+        }
+      });
+    });
+  }
+
+  // ============================================================
+  // MODAL: LOGS DE AUDITORÍA (SUPERADMIN)
+  // ============================================================
+  var btnOpenLogs    = document.getElementById('btnOpenLogs');
+  var tablaLogsBody  = document.getElementById('tablaLogsBody');
+
+  function loadAuditLogs() {
+    if (!tablaLogsBody) return;
+    tablaLogsBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando registros...</td></tr>';
+
+    fetch('api/admin/logs.php')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success || !data.logs || data.logs.length === 0) {
+          tablaLogsBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">No hay registros de auditoría</td></tr>';
+          return;
+        }
+
+        tablaLogsBody.innerHTML = data.logs.map(function(l) {
+          var f = new Date(l.fecha_hora.replace(/-/g, '/'));
+          var fStr = isNaN(f.getTime()) ? l.fecha_hora : f.toLocaleString('es-CO');
+
+          return '<tr>' +
+            '<td>#' + l.id_log + '</td>' +
+            '<td>' + fStr + '</td>' +
+            '<td><strong>' + escHtml(l.nombre_usuario) + '</strong><br><small style="color:#888;">' + escHtml(l.correo_usuario) + '</small></td>' +
+            '<td><span class="user-pill__badge user-pill__badge--' + escHtml(l.nombre_rol.toLowerCase()) + '">' + escHtml(l.nombre_rol) + '</span></td>' +
+            '<td><code>' + escHtml(l.accion) + '</code></td>' +
+            '<td><span class="status-badge" style="background:#eee;color:#444;">' + escHtml(l.tabla_afectada) + '</span></td>' +
+          '</tr>';
+        }).join('');
+      })
+      .catch(function() {
+        tablaLogsBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Error al cargar logs</td></tr>';
+      });
+  }
+
+  if (btnOpenLogs) {
+    btnOpenLogs.addEventListener('click', function() {
+      openModal('modalLogs');
+      loadAuditLogs();
+    });
+  }
+
+  // ============================================================
+  // MODAL: GENERAR INFORME IMPRIMIBLE (HU8)
+  // ============================================================
+  var btnOpenReporte       = document.getElementById('btnOpenReporte');
+  var btnRecalcularReporte = document.getElementById('btnRecalcularReporte');
+  var btnImprimirReporte   = document.getElementById('btnImprimirReporte');
+
+  function renderReportMetrics(data) {
+    var m = data.metrics || {};
+    var totales = m.total_citas || 0;
+    var reales  = m.ingresos_reales || 0;
+    var proyect = m.ingresos_proyectados || 0;
+    var estados = m.por_estado || {};
+
+    var completadas = estados['Completada'] || 0;
+    var efectividad = totales > 0 ? Math.round((completadas / totales) * 100) : 0;
+
+    // Actualizar KPI Cards
+    document.getElementById('kpiTotalCitas').textContent = totales;
+    document.getElementById('kpiIngresosReales').textContent = formatMoney(reales);
+    document.getElementById('kpiIngresosProyectados').textContent = formatMoney(proyect);
+    document.getElementById('kpiTasaEfectividad').textContent = efectividad + '%';
+
+    // Período
+    var repPeriodoLabel = document.getElementById('repPeriodoLabel');
+    if (repPeriodoLabel && data.periodo) {
+      repPeriodoLabel.textContent = data.periodo.desde + ' hasta ' + data.periodo.hasta;
+    }
+
+    // Desglose Estados
+    var estadosBox = document.getElementById('repEstadosContainer');
+    if (estadosBox) {
+      var estHtml = '<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap: 6px;">';
+      for (var st in estados) {
+        if (estados.hasOwnProperty(st)) {
+          var cls = estadoClasses[st] || 'pendiente';
+          estHtml += '<div style="display:flex; justify-content:space-between; padding:4px 8px; background:rgba(0,0,0,0.03); border-radius:4px;">' +
+            '<span class="status-badge status-badge--' + cls + '">' + escHtml(st) + '</span>' +
+            '<strong>' + estados[st] + '</strong>' +
+          '</div>';
+        }
+      }
+      estHtml += '</div>';
+      estadosBox.innerHTML = estHtml;
+    }
+
+    // Desglose Especialistas
+    var espBox = document.getElementById('repEspecialistasContainer');
+    if (espBox && m.por_especialista) {
+      espBox.innerHTML = m.por_especialista.map(function(e) {
+        return '<div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px dashed rgba(0,0,0,0.08); font-size:0.85rem;">' +
+          '<span>' + escHtml(e.especialista) + '</span>' +
+          '<span><strong>' + e.citas + ' citas</strong> (' + formatMoney(e.ingresos) + ')</span>' +
+        '</div>';
+      }).join('') || '<p style="color:#888;">Sin citas en el período</p>';
+    }
+
+    // Desglose Servicios
+    var servBox = document.getElementById('repServiciosContainer');
+    if (servBox && m.por_servicio) {
+      servBox.innerHTML = '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">' +
+        m.por_servicio.map(function(s) {
+          return '<div style="padding:8px 12px; background:rgba(0,0,0,0.02); border-left:3px solid var(--color-olive); border-radius:4px;">' +
+            '<strong>' + escHtml(s.nombre_servicio) + '</strong><br>' +
+            '<span style="font-size:0.8rem; color:#666;">' + s.citas + ' citas · ' + formatMoney(s.ingresos) + '</span>' +
+          '</div>';
+        }).join('') + '</div>';
+    }
+
+    // Tabla de Citas del Período
+    var tablaCitasBody = document.getElementById('tablaReporteCitasBody');
+    if (tablaCitasBody) {
+      if (!data.citas || data.citas.length === 0) {
+        tablaCitasBody.innerHTML = '<tr><td colspan="7" class="dashboard__empty">No se encontraron citas en este período</td></tr>';
+      } else {
+        tablaCitasBody.innerHTML = data.citas.map(function(c) {
+          var cls = estadoClasses[c.nombre_estado] || 'pendiente';
+          return '<tr>' +
+            '<td>#' + c.id_reserva + '</td>' +
+            '<td>' + c.fecha_hora_inicio + '</td>' +
+            '<td>' + escHtml(c.nombre_cliente) + '</td>' +
+            '<td>' + escHtml(c.nombre_servicio) + '</td>' +
+            '<td>' + escHtml(c.nombre_esteticista) + '</td>' +
+            '<td>' + formatMoney(c.precio) + '</td>' +
+            '<td><span class="status-badge status-badge--' + cls + '">' + escHtml(c.nombre_estado) + '</span></td>' +
+          '</tr>';
+        }).join('');
+      }
+    }
+  }
+
+  function fetchReportData() {
+    var d = document.getElementById('repDesde').value;
+    var h = document.getElementById('repHasta').value;
+    var params = new URLSearchParams();
+    if (d) params.set('desde', d);
+    if (h) params.set('hasta', h);
+
+    fetch('api/admin/report.php?' + params.toString())
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.success) {
+          renderReportMetrics(data);
+        } else {
+          showToast(data.error || 'Error al generar reporte', 'error');
+        }
+      })
+      .catch(function() {
+        showToast('Error al conectar para generar informe', 'error');
+      });
+  }
+
+  if (btnOpenReporte) {
+    btnOpenReporte.addEventListener('click', function() {
+      openModal('modalReporte');
+      fetchReportData();
+    });
+  }
+
+  if (btnRecalcularReporte) {
+    btnRecalcularReporte.addEventListener('click', fetchReportData);
+  }
+
+  // Tarea 3: Impresión limpia
+  if (btnImprimirReporte) {
+    btnImprimirReporte.addEventListener('click', function() {
+      window.print();
+    });
+  }
+
+  // Cierre de sesión
+  var logoutBtn = document.getElementById('dashLogoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', function() {
+      fetch('api/auth/logout.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ csrf_token: csrfToken })
+      })
+      .then(function() { window.location.href = 'index.php'; })
+      .catch(function() { window.location.href = 'index.php'; });
+    });
+  }
+
+  // Carga inicial
   loadReservas();
+
 })();

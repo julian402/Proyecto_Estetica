@@ -121,27 +121,92 @@
     });
   })();
 
-  // ---- Specialist Pills ----
+  // ---- Stepper progression helper ----
+  function setStepperStep(stepNum) {
+    var steps = document.querySelectorAll('.stepper__step');
+    steps.forEach(function(step) {
+      var num = parseInt(step.getAttribute('data-step') || '1');
+      step.classList.remove('stepper__step--active');
+      step.classList.remove('stepper__step--completed');
+      if (num === stepNum) {
+        step.classList.add('stepper__step--active');
+      } else if (num < stepNum) {
+        step.classList.add('stepper__step--completed');
+      }
+    });
+  }
+
+  // ---- Summary update (Tratamiento, Especialista, Fecha/Hora, Valor) ----
+  function updateBookingSummary() {
+    var select = document.getElementById('tratamiento');
+    if (!select) return;
+
+    var opt = select.options[select.selectedIndex];
+    var summaryTreatment = document.getElementById('summaryTreatment');
+    var summaryDuration  = document.getElementById('summaryDuration');
+    var summaryPrice     = document.getElementById('summaryPrice');
+    var summaryEsp       = document.getElementById('summarySpecialist');
+    var summaryFechaHora = document.getElementById('summaryFechaHora');
+
+    // Fallbacks a filas si no están los IDs
+    var summaryRows = document.querySelectorAll('.booking__summary-row');
+    if (!summaryTreatment && summaryRows.length > 0) summaryTreatment = summaryRows[0].querySelector('strong');
+    if (!summaryDuration && summaryRows.length > 1) summaryDuration = summaryRows[1].querySelector('strong');
+    if (!summaryEsp && summaryRows.length > 2) summaryEsp = summaryRows[2].querySelector('strong');
+    if (!summaryPrice && summaryRows.length > 4) summaryPrice = summaryRows[4].querySelector('strong');
+
+    if (opt && opt.value) {
+      var parts = opt.textContent.split(' — ');
+      if (summaryTreatment) summaryTreatment.textContent = parts[0].trim();
+      var dur = opt.getAttribute('data-duracion');
+      if (summaryDuration && dur) summaryDuration.textContent = dur + ' min';
+      var precio = opt.getAttribute('data-precio');
+      if (summaryPrice && precio) summaryPrice.textContent = '$' + precio;
+    }
+
+    // Especialista (radio pills debajo de tratamiento)
+    var checkedRadio = document.querySelector('input[name="esteticista_id"]:checked');
+    if (checkedRadio && summaryEsp) {
+      if (checkedRadio.value === '0') {
+        summaryEsp.textContent = 'Aleatorio (disponible)';
+      } else {
+        var pill = checkedRadio.closest('.specialist-pill');
+        summaryEsp.textContent = pill ? pill.textContent.trim() : 'Asignado';
+      }
+    }
+
+    // Fecha y hora
+    var fechaIn = document.getElementById('fecha');
+    var horaSel = document.getElementById('hora');
+    if (summaryFechaHora) {
+      if (fechaIn && fechaIn.value && horaSel && horaSel.value && horaSel.value.indexOf('Selecciona') === -1 && horaSel.value.indexOf('Sin') === -1 && horaSel.value.indexOf('Cargando') === -1) {
+        var fParts = fechaIn.value.split('-');
+        var fStr = fParts.length === 3 ? (fParts[2] + '/' + fParts[1] + '/' + fParts[0]) : fechaIn.value;
+        summaryFechaHora.textContent = fStr + ' • ' + horaSel.value;
+      } else if (fechaIn && fechaIn.value) {
+        var fParts2 = fechaIn.value.split('-');
+        var fStr2 = fParts2.length === 3 ? (fParts2[2] + '/' + fParts2[1] + '/' + fParts2[0]) : fechaIn.value;
+        summaryFechaHora.textContent = fStr2 + ' (hora pendiente)';
+      } else {
+        summaryFechaHora.textContent = 'Por seleccionar';
+      }
+    }
+  }
+
+  // ---- Specialist Pills (debajo de tratamiento) ----
   (function() {
     var pills = document.querySelectorAll('.specialist-pill');
-    var summaryRows = document.querySelectorAll('.booking__summary-row');
-    if (summaryRows.length < 3) return;
-
-    var summaryEsp = summaryRows[2].querySelector('strong');
-
     pills.forEach(function(pill) {
       pill.addEventListener('click', function() {
         pills.forEach(function(p) { p.classList.remove('specialist-pill--active'); });
         pill.classList.add('specialist-pill--active');
         var input = pill.querySelector('input');
-        // Mostrar nombre: si value es "0" es aleatorio, si no es el texto del label
-        if (input.value === '0') {
-          if (summaryEsp) summaryEsp.textContent = 'Aleatorio (disponible)';
-        } else {
-          // Obtener texto del pill (sin el dot span)
-          var name = pill.textContent.trim();
-          if (summaryEsp) summaryEsp.textContent = name;
+        if (input) {
+          input.checked = true;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
         }
+        updateBookingSummary();
+        if (window.loadAvailableSlots) window.loadAvailableSlots();
       });
     });
 
@@ -149,37 +214,58 @@
     if (checked) checked.closest('.specialist-pill').classList.add('specialist-pill--active');
   })();
 
-  // ---- Treatment select -> booking summary update ----
+  // ---- Treatment select -> booking summary update & stepper events ----
   (function() {
     var select = document.getElementById('tratamiento');
-    if (!select) return;
-
-    var summaryRows = document.querySelectorAll('.booking__summary-row');
-    if (summaryRows.length < 4) return;
-
-    var summaryTreatment = summaryRows[0].querySelector('strong');
-    var summaryDuration  = summaryRows[1].querySelector('strong');
-    var summaryPrice     = summaryRows[3].querySelector('strong');
-
-    function updateSummary() {
-      var opt = select.options[select.selectedIndex];
-      if (!opt) return;
-      var parts = opt.textContent.split(' — ');
-      if (summaryTreatment) summaryTreatment.textContent = parts[0].trim();
-      if (summaryDuration) summaryDuration.textContent = opt.getAttribute('data-duracion') + ' min';
-      if (summaryPrice) summaryPrice.textContent = '$' + opt.getAttribute('data-precio');
+    if (select) {
+      select.addEventListener('change', function() {
+        updateBookingSummary();
+        if (window.loadAvailableSlots) window.loadAvailableSlots();
+      });
     }
-
-    select.addEventListener('change', updateSummary);
 
     // Treatment card -> booking pre-selection
     document.querySelectorAll('[data-treatment]').forEach(function(btn) {
       btn.addEventListener('click', function() {
         var idx = parseInt(btn.getAttribute('data-treatment'));
-        select.selectedIndex = idx;
-        updateSummary();
+        if (select) {
+          var validOptions = Array.from(select.options).filter(function(o) { return !o.disabled; });
+          if (validOptions[idx]) {
+            select.value = validOptions[idx].value;
+          } else {
+            select.selectedIndex = Math.min(idx + 1, select.options.length - 1);
+          }
+          updateBookingSummary();
+          if (window.loadAvailableSlots) window.loadAvailableSlots();
+        }
       });
     });
+
+    // Stepper click & step-group focus tracking
+    var steps = document.querySelectorAll('.stepper__step');
+    steps.forEach(function(step) {
+      step.addEventListener('click', function() {
+        var num = parseInt(step.getAttribute('data-step') || '1');
+        setStepperStep(num);
+        if (num === 1) {
+          var el1 = document.getElementById('tratamiento');
+          if (el1) el1.focus();
+        } else if (num === 2) {
+          var el2 = document.getElementById('fecha');
+          if (el2) el2.focus();
+        } else if (num === 3) {
+          var el3 = document.getElementById('bookNombre');
+          if (el3) el3.focus();
+        }
+      });
+    });
+
+    var g1 = document.getElementById('stepGroup1');
+    var g2 = document.getElementById('stepGroup2');
+    var g3 = document.getElementById('stepGroup3');
+    if (g1) g1.addEventListener('focusin', function() { setStepperStep(1); });
+    if (g2) g2.addEventListener('focusin', function() { setStepperStep(2); });
+    if (g3) g3.addEventListener('focusin', function() { setStepperStep(3); });
   })();
 
   // ---- Filter tabs (tratamientos) ----
@@ -273,6 +359,55 @@
   // ---- Alternar UI guest/logged ----
   var ADMIN_ROLES = [2, 3, 4];
 
+  function autofillBookingForm(user) {
+    if (!user) return;
+    var nameInput  = document.getElementById('bookNombre');
+    var emailInput = document.getElementById('bookCorreo');
+    var phoneInput = document.getElementById('bookTelefono');
+
+    var userName  = user.name || user.nombre || '';
+    var userEmail = user.email || user.correo || '';
+    var userPhone = user.phone || user.telefono || '';
+
+    if (nameInput && userName && !nameInput.value) {
+      nameInput.value = userName;
+    } else if (nameInput && userName) {
+      nameInput.value = userName;
+    }
+
+    if (emailInput && userEmail && !emailInput.value) {
+      emailInput.value = userEmail;
+    } else if (emailInput && userEmail) {
+      emailInput.value = userEmail;
+    }
+
+    if (phoneInput && userPhone) {
+      phoneInput.value = userPhone;
+    } else if (phoneInput && !phoneInput.value) {
+      fetch('api/auth/profile.php')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success && data.user && data.user.phone && phoneInput && !phoneInput.value) {
+            phoneInput.value = data.user.phone;
+          }
+        })
+        .catch(function() {});
+    }
+  }
+
+  function updateAvatar(user) {
+    var avatar = document.getElementById('perfilAvatar');
+    if (!avatar || !user) return;
+    var name = user.name || user.nombre || '';
+    if (!name) return;
+    var parts = name.trim().split(/\s+/);
+    var initials = parts.length > 1
+      ? (parts[0][0] + parts[1][0]).toUpperCase()
+      : name.substring(0, 2).toUpperCase();
+    var span = avatar.querySelector('span');
+    if (span) span.textContent = initials;
+  }
+
   function setLoggedIn(user) {
     var guest = document.getElementById('userMenuGuest');
     var logged = document.getElementById('userMenuLogged');
@@ -310,6 +445,10 @@
         }
       }
     }
+
+    // Autocompletar datos del usuario logueado en la reserva
+    autofillBookingForm(user);
+    updateAvatar(user);
   }
 
   function setLoggedOut() {
@@ -365,20 +504,20 @@
           var modal = document.getElementById('loginModal');
           if (modal) window.closeModal(modal);
           form.reset();
-          showToast('Bienvenido/a, ' + (data.user && data.user.name ? data.user.name : '') + '!', 'success');
+          showToast('¡Bienvenido/a, ' + (data.user && data.user.name ? data.user.name : '') + '!', 'success');
         } else {
-          showError('loginError', data.error || 'Error al iniciar sesion');
-          showToast(data.error || 'Error al iniciar sesion', 'error');
+          showError('loginError', data.error || 'Error al iniciar sesión');
+          showToast(data.error || 'Error al iniciar sesión', 'error');
         }
       })
       .catch(function() {
-        showError('loginError', 'Error de conexion. Intenta de nuevo.');
-        showToast('Error de conexion. Intenta de nuevo.', 'error');
+        showError('loginError', 'Error de conexión. Intenta de nuevo.');
+        showToast('Error de conexión. Intenta de nuevo.', 'error');
       });
     });
   })();
 
-  // ---- Register ----
+  // ---- Register (Tarea 21: Contraseña mínimo 8 caracteres) ----
   (function() {
     var form = document.getElementById('registerForm');
     if (!form) return;
@@ -391,8 +530,22 @@
       var password = document.getElementById('regPassword').value;
       var confirm = document.getElementById('regPasswordConfirm').value;
 
+      if (!name) {
+        showError('registerError', 'Por favor ingresa tu nombre');
+        return;
+      }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showError('registerError', 'Por favor ingresa un correo electrónico válido');
+        return;
+      }
+      if (password.length < 8) {
+        showError('registerError', 'La contraseña debe tener al menos 8 caracteres');
+        showToast('La contraseña debe tener al menos 8 caracteres', 'error');
+        return;
+      }
       if (password !== confirm) {
-        showError('registerError', 'Las contrasenas no coinciden');
+        showError('registerError', 'Las contraseñas no coinciden');
+        showToast('Las contraseñas no coinciden', 'error');
         return;
       }
 
@@ -416,15 +569,15 @@
           var modal = document.getElementById('registerModal');
           if (modal) window.closeModal(modal);
           form.reset();
-          showToast('Cuenta creada exitosamente. Bienvenido/a!', 'success');
+          showToast('¡Cuenta creada exitosamente! Bienvenido/a.', 'success');
         } else {
           showError('registerError', data.error || 'Error al registrarse');
           showToast(data.error || 'Error al registrarse', 'error');
         }
       })
       .catch(function() {
-        showError('registerError', 'Error de conexion. Intenta de nuevo.');
-        showToast('Error de conexion. Intenta de nuevo.', 'error');
+        showError('registerError', 'Error de conexión. Intenta de nuevo.');
+        showToast('Error de conexión. Intenta de nuevo.', 'error');
       });
     });
   })();
@@ -457,6 +610,8 @@
   })();
 
   // ---- Booking (crear reserva) ----
+  var lastBookingInfo = null;
+
   (function() {
     var confirmBtn = document.getElementById('confirmBookingBtn');
     var messageEl = document.getElementById('bookingMessage');
@@ -480,16 +635,22 @@
     // ---- Cargar horarios disponibles ----
     var loadingSlots = false;
     function loadAvailableSlots() {
-      if (!fechaInput || !fechaInput.value || !selectServ) return;
+      if (!fechaInput || !fechaInput.value || !selectServ || !horaSelect) return;
       if (loadingSlots) return;
       loadingSlots = true;
 
       var estId = getSelectedEsteticista();
-      var params = 'date=' + fechaInput.value +
-                   '&servicio_id=' + selectServ.value +
-                   '&esteticista_id=' + estId;
+      var servVal = selectServ.value;
+      if (!servVal || parseInt(servVal) <= 0) {
+        loadingSlots = false;
+        return;
+      }
 
-      horaSelect.innerHTML = '<option value="">Cargando...</option>';
+      var params = 'date=' + encodeURIComponent(fechaInput.value) +
+                   '&servicio_id=' + encodeURIComponent(servVal) +
+                   '&esteticista_id=' + encodeURIComponent(estId);
+
+      horaSelect.innerHTML = '<option value="">Cargando horarios...</option>';
       horaSelect.disabled = true;
 
       fetch('api/appointments/availability.php?' + params)
@@ -498,9 +659,10 @@
           loadingSlots = false;
           horaSelect.disabled = false;
 
-          if (!data.success || data.slots.length === 0) {
+          if (!data.success || !data.slots || data.slots.length === 0) {
             horaSelect.innerHTML = '<option value="">Sin horarios disponibles</option>';
             confirmBtn.disabled = true;
+            if (typeof updateBookingSummary === 'function') updateBookingSummary();
             return;
           }
 
@@ -508,43 +670,132 @@
             return '<option value="' + s + '">' + s + '</option>';
           }).join('');
           confirmBtn.disabled = false;
+          if (typeof updateBookingSummary === 'function') updateBookingSummary();
         })
         .catch(function() {
           loadingSlots = false;
           horaSelect.disabled = false;
-          horaSelect.innerHTML = '<option value="">Error al cargar</option>';
+          horaSelect.innerHTML = '<option value="">Error al cargar horarios</option>';
+          if (typeof updateBookingSummary === 'function') updateBookingSummary();
         });
     }
 
-    if (selectServ) selectServ.addEventListener('change', loadAvailableSlots);
-    if (fechaInput) fechaInput.addEventListener('change', loadAvailableSlots);
+    window.loadAvailableSlots = loadAvailableSlots;
+
+    if (selectServ) {
+      selectServ.addEventListener('change', function() {
+        loadAvailableSlots();
+        if (typeof updateBookingSummary === 'function') updateBookingSummary();
+      });
+    }
+    if (fechaInput) {
+      fechaInput.addEventListener('change', function() {
+        loadAvailableSlots();
+        if (typeof updateBookingSummary === 'function') updateBookingSummary();
+      });
+    }
+    if (horaSelect) {
+      horaSelect.addEventListener('change', function() {
+        if (typeof updateBookingSummary === 'function') updateBookingSummary();
+      });
+    }
 
     document.querySelectorAll('input[name="esteticista_id"]').forEach(function(radio) {
-      radio.addEventListener('change', loadAvailableSlots);
+      radio.addEventListener('change', function() {
+        loadAvailableSlots();
+        if (typeof updateBookingSummary === 'function') updateBookingSummary();
+      });
     });
 
     loadAvailableSlots();
+    if (typeof updateBookingSummary === 'function') updateBookingSummary();
 
-    // ---- Enviar reserva ----
+    // ---- Enviar reserva con validación estricta y manejo de conflictos ----
     confirmBtn.addEventListener('click', function() {
-      var nombre = document.getElementById('bookNombre');
-      var correo = document.getElementById('bookCorreo');
-      var telefono = document.getElementById('bookTelefono');
+      var nombreEl   = document.getElementById('bookNombre');
+      var correoEl   = document.getElementById('bookCorreo');
+      var telefonoEl = document.getElementById('bookTelefono');
 
-      if (!nombre || !nombre.value.trim()) {
-        showToast('Por favor ingresa tu nombre.', 'warning');
+      var nombre   = nombreEl ? nombreEl.value.trim() : '';
+      var correo   = correoEl ? correoEl.value.trim() : '';
+      var telefono = telefonoEl ? telefonoEl.value.trim() : '';
+      var servicioId = selectServ ? parseInt(selectServ.value) : 0;
+      var esteticistaId = getSelectedEsteticista();
+      var fecha = fechaInput ? fechaInput.value.trim() : '';
+      var hora = horaSelect ? horaSelect.value.trim() : '';
+
+      // Tarea 22: Validación de Tratamiento
+      if (!servicioId || isNaN(servicioId) || servicioId <= 0) {
+        showToast('Por favor selecciona un tratamiento para tu cita.', 'warning');
+        if (selectServ) selectServ.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(1);
         return;
       }
-      if (!correo || !correo.value.trim()) {
-        showToast('Por favor ingresa tu correo.', 'warning');
+
+      // Tarea 22: Validación de Fecha
+      if (!fecha) {
+        showToast('Por favor selecciona la fecha de tu cita.', 'warning');
+        if (fechaInput) fechaInput.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(2);
         return;
       }
-      if (!fechaInput || !fechaInput.value) {
-        showToast('Por favor selecciona una fecha.', 'warning');
+      var todayStr = new Date().toISOString().split('T')[0];
+      if (fecha < todayStr) {
+        showToast('La fecha de la reserva debe ser para hoy o un día futuro.', 'warning');
+        if (fechaInput) fechaInput.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(2);
         return;
       }
-      if (!horaSelect.value) {
-        showToast('No hay horario disponible seleccionado.', 'warning');
+
+      // Tarea 22: Validación de Hora
+      if (!hora || hora.indexOf('Sin horarios') !== -1 || hora.indexOf('Cargando') !== -1 || hora.indexOf('Selecciona') !== -1) {
+        showToast('Por favor selecciona una hora disponible para tu cita.', 'warning');
+        if (horaSelect) horaSelect.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(2);
+        return;
+      }
+
+      // Tarea 22: Validación de Nombre
+      if (!nombre) {
+        showToast('Por favor ingresa tu nombre completo.', 'warning');
+        if (nombreEl) nombreEl.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(3);
+        return;
+      }
+      if (nombre.length < 3) {
+        showToast('Por favor ingresa un nombre válido (mínimo 3 caracteres).', 'warning');
+        if (nombreEl) nombreEl.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(3);
+        return;
+      }
+
+      // Tarea 19 & Tarea 22: Validación de Teléfono obligatorio
+      if (!telefono) {
+        showToast('Por favor ingresa tu número de teléfono de contacto.', 'warning');
+        if (telefonoEl) telefonoEl.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(3);
+        return;
+      }
+      var cleanPhone = telefono.replace(/[\s+-]/g, '');
+      if (cleanPhone.length < 7 || !/^\d+$/.test(cleanPhone)) {
+        showToast('Por favor ingresa un número de teléfono válido (mínimo 7 dígitos).', 'warning');
+        if (telefonoEl) telefonoEl.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(3);
+        return;
+      }
+
+      // Tarea 22: Validación de Correo
+      if (!correo) {
+        showToast('Por favor ingresa tu correo electrónico.', 'warning');
+        if (correoEl) correoEl.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(3);
+        return;
+      }
+      var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(correo)) {
+        showToast('Por favor ingresa un correo electrónico válido (ej: nombre@correo.com).', 'warning');
+        if (correoEl) correoEl.focus();
+        if (typeof setStepperStep === 'function') setStepperStep(3);
         return;
       }
 
@@ -552,13 +803,13 @@
       confirmBtn.textContent = 'Agendando...';
 
       var body = {
-        nombre: nombre.value.trim(),
-        correo: correo.value.trim(),
-        telefono: telefono ? telefono.value.trim() : '',
-        servicio_id: parseInt(selectServ.value),
-        esteticista_id: getSelectedEsteticista(),
-        date: fechaInput.value,
-        time: horaSelect.value,
+        nombre: nombre,
+        correo: correo,
+        telefono: telefono,
+        servicio_id: servicioId,
+        esteticista_id: esteticistaId,
+        date: fecha,
+        time: hora,
         csrf_token: csrfToken
       };
 
@@ -567,30 +818,80 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
-      .then(function(res) { return res.json(); })
-      .then(function(data) {
+      .then(function(res) {
+        return res.json().then(function(data) {
+          return { status: res.status, data: data };
+        });
+      })
+      .then(function(result) {
         confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Confirmar Reserva';
+        confirmBtn.textContent = 'Confirmar reserva';
+        var data = result.data;
 
-        if (data.success) {
-          showToast('Cita agendada con exito. Te contactaremos para confirmar.', 'success');
+        if (result.status === 200 && data.success) {
+          showToast('¡Cita agendada con éxito! Te contactaremos para confirmar.', 'success');
+          if (typeof setStepperStep === 'function') setStepperStep(3);
+
+          lastBookingInfo = {
+            nombre: nombre,
+            correo: correo,
+            telefono: telefono
+          };
+
           if (messageEl) {
-            messageEl.textContent = 'Cita agendada. Revisa tu correo para completar tu cuenta.';
-            messageEl.style.color = '#27ae60';
+            var isUserLogged = document.getElementById('userMenuLogged') &&
+                               document.getElementById('userMenuLogged').style.display !== 'none';
+            if (!isUserLogged) {
+              messageEl.innerHTML = '<span style="color:#27ae60; font-weight:600;">¡Cita agendada con éxito!</span> ' +
+                '¿Deseas <button type="button" id="linkCompletarCuenta" style="color:var(--color-olive); font-weight:600; text-decoration:underline; background:none; border:none; cursor:pointer; padding:0; font-size:inherit;">completar tu cuenta</button> para consultar y reprogramar tu cita en cualquier momento?';
+
+              var compLink = document.getElementById('linkCompletarCuenta');
+              if (compLink) {
+                compLink.addEventListener('click', function() {
+                  openCompleteAccountModal(lastBookingInfo);
+                });
+              }
+            } else {
+              messageEl.innerHTML = '<span style="color:#27ae60; font-weight:600;">¡Cita agendada con éxito!</span> Puedes consultarla en <button type="button" id="linkMisCitasFromBooking" style="color:var(--color-olive); font-weight:600; text-decoration:underline; background:none; border:none; cursor:pointer; padding:0; font-size:inherit;">Mis citas</button>.';
+              var mcLink = document.getElementById('linkMisCitasFromBooking');
+              if (mcLink) {
+                mcLink.addEventListener('click', function() {
+                  var btn = document.getElementById('openCitasBtn');
+                  if (btn) btn.click();
+                });
+              }
+            }
           }
+
           loadAvailableSlots();
         } else {
-          showToast(data.error || 'Error al agendar la cita.', 'error');
-          if (messageEl) {
-            messageEl.textContent = data.error || 'Error al agendar la cita.';
-            messageEl.style.color = '#e74c3c';
+          // Manejo de conflicto de horario del cliente o del especialista
+          var errMsg = data.error || 'Error al agendar la cita.';
+          var isConflict = result.status === 409 ||
+            errMsg.toLowerCase().indexOf('choque') !== -1 ||
+            errMsg.toLowerCase().indexOf('ya tiene una reserva') !== -1 ||
+            errMsg.toLowerCase().indexOf('bloqueo de agenda') !== -1 ||
+            errMsg.toLowerCase().indexOf('ya tienes una cita agendada') !== -1;
+
+          if (isConflict) {
+            var conflictMsg = 'Ya tienes una cita agendada a esa misma hora o el especialista ya no está disponible en ese horario. Por favor elige otro horario.';
+            showToast(conflictMsg, 'error');
+            if (messageEl) {
+              messageEl.innerHTML = '<span style="color:#e74c3c; font-weight:500;">' + conflictMsg + '</span>';
+            }
+          } else {
+            showToast(errMsg, 'error');
+            if (messageEl) {
+              messageEl.innerHTML = '<span style="color:#e74c3c;">' + escHtml(errMsg) + '</span>';
+            }
           }
+          loadAvailableSlots();
         }
       })
       .catch(function() {
         confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Confirmar Reserva';
-        showToast('Error de conexion. Intenta de nuevo.', 'error');
+        confirmBtn.textContent = 'Confirmar reserva';
+        showToast('Error de conexión. Intenta de nuevo.', 'error');
       });
     });
   })();
@@ -608,7 +909,7 @@
     return d.innerHTML;
   }
 
-  // ---- Mis citas ----
+  // ---- Mis citas (Tarea 17: Experiencia visual moderna K-Beauty, Reprogramar y Cancelar) ----
   (function() {
     var btn = document.getElementById('openCitasBtn');
     if (!btn) return;
@@ -617,13 +918,25 @@
 
     function loadCitas() {
       var container = document.getElementById('citasList');
-      container.innerHTML = '<p style="text-align:center; color:#999;">Cargando...</p>';
+      if (!container) return;
+      container.innerHTML = '<p style="text-align:center; color:#999; padding:24px 0;">Cargando tus citas...</p>';
 
       fetch('api/appointments/list.php')
         .then(function(r) { return r.json(); })
         .then(function(data) {
-          if (!data.success || data.reservas.length === 0) {
-            container.innerHTML = '<p class="modal__empty">No tienes citas agendadas.</p>';
+          if (!data.success || !data.reservas || data.reservas.length === 0) {
+            container.innerHTML = '<div class="modal__empty">' +
+              '<p style="margin-bottom:8px; font-weight:500; font-size:1rem; color:var(--color-text);">No tienes citas agendadas actualmente.</p>' +
+              '<p style="margin-bottom:20px; font-size:0.88rem; color:var(--color-text-muted);">Descubre nuestros tratamientos faciales y reserva tu momento de cuidado coreano.</p>' +
+              '<a href="#agendar" class="btn btn--primary btn--sm" data-close-citas>Agendar una cita</a>' +
+            '</div>';
+            var closeA = container.querySelector('[data-close-citas]');
+            if (closeA) {
+              closeA.addEventListener('click', function() {
+                var modal = document.getElementById('citasModal');
+                if (modal && window.closeModal) window.closeModal(modal);
+              });
+            }
             return;
           }
 
@@ -637,9 +950,26 @@
             };
             var cls = estadoCls[r.nombre_estado] || 'pendiente';
 
-            var cancelBtn = r.nombre_estado === 'Pendiente'
-              ? '<div class="cita-card__actions"><button class="btn--danger" data-cancel-cita="' + r.id_reserva + '">Cancelar</button></div>'
-              : '';
+            var canModify = (r.nombre_estado === 'Pendiente' || r.nombre_estado === 'Confirmada');
+            var actionHtml = '';
+
+            if (canModify) {
+              actionHtml = '<div class="cita-card__actions">' +
+                '<button type="button" class="btn--reschedule" ' +
+                  'data-reschedule-cita="' + r.id_reserva + '" ' +
+                  'data-servicio-id="' + (r.id_servicio || '') + '" ' +
+                  'data-servicio-nombre="' + escHtml(r.nombre_servicio) + '" ' +
+                  'data-esteticista-id="' + (r.id_esteticista || '0') + '" ' +
+                  'data-esteticista-nombre="' + escHtml(r.nombre_esteticista || 'Aleatorio') + '" ' +
+                  'data-fecha-str="' + fechaStr + '" ' +
+                  'data-hora-str="' + horaStr + '">Reprogramar</button>' +
+                '<button type="button" class="btn--danger-outline" data-cancel-cita="' + r.id_reserva + '">Cancelar</button>' +
+              '</div>';
+            } else if (r.nombre_estado === 'Cancelada') {
+              actionHtml = '<div class="cita-card__actions"><span class="cita-card__note">Cita cancelada</span></div>';
+            } else if (r.nombre_estado === 'Completada') {
+              actionHtml = '<div class="cita-card__actions"><span class="cita-card__note">Tratamiento completado</span></div>';
+            }
 
             return '<div class="cita-card">' +
               '<div class="cita-card__header">' +
@@ -649,22 +979,41 @@
               '<div class="cita-card__details">' +
                 '<span>Fecha: <strong>' + fechaStr + '</strong></span>' +
                 '<span>Hora: <strong>' + horaStr + '</strong></span>' +
-                '<span>Especialista: <strong>' + escHtml(r.nombre_esteticista) + '</strong></span>' +
-                '<span>Duracion: <strong>' + r.duracion_minutos + ' min</strong></span>' +
+                '<span>Especialista: <strong>' + escHtml(r.nombre_esteticista || 'Aleatorio') + '</strong></span>' +
+                '<span>Duración: <strong>' + r.duracion_minutos + ' min</strong></span>' +
                 '<span>Valor: <strong>$' + Number(r.precio).toLocaleString('es-CO') + '</strong></span>' +
               '</div>' +
-              cancelBtn +
+              actionHtml +
             '</div>';
           }).join('');
 
+          // Cancelar cita con confirmación
           container.querySelectorAll('[data-cancel-cita]').forEach(function(b) {
             b.addEventListener('click', function() {
-              cancelCita(parseInt(b.dataset.cancelCita));
+              var id = parseInt(b.getAttribute('data-cancel-cita'));
+              if (confirm('¿Estás seguro de que deseas cancelar esta cita? Esta acción liberará el espacio reservado.')) {
+                cancelCita(id);
+              }
+            });
+          });
+
+          // Reprogramar cita
+          container.querySelectorAll('[data-reschedule-cita]').forEach(function(b) {
+            b.addEventListener('click', function() {
+              openRescheduleModal({
+                id: parseInt(b.getAttribute('data-reschedule-cita')),
+                servicioId: parseInt(b.getAttribute('data-servicio-id') || '0'),
+                servicioNombre: b.getAttribute('data-servicio-nombre') || '',
+                esteticistaId: parseInt(b.getAttribute('data-esteticista-id') || '0'),
+                esteticistaNombre: b.getAttribute('data-esteticista-nombre') || '',
+                fechaStr: b.getAttribute('data-fecha-str') || '',
+                horaStr: b.getAttribute('data-hora-str') || ''
+              });
             });
           });
         })
         .catch(function() {
-          container.innerHTML = '<p class="modal__empty">Error al cargar tus citas.</p>';
+          container.innerHTML = '<p class="modal__empty">Error al cargar tus citas. Intenta de nuevo.</p>';
         });
     }
 
@@ -677,17 +1026,318 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) {
-          showToast('Cita cancelada', 'info');
+          showToast('Cita cancelada correctamente', 'info');
           loadCitas();
         } else {
-          showToast(data.error || 'No se pudo cancelar', 'error');
+          showToast(data.error || 'No se pudo cancelar la cita', 'error');
         }
       })
-      .catch(function() { showToast('Error de conexion', 'error'); });
+      .catch(function() { showToast('Error de conexión', 'error'); });
     }
+
+    window.loadCitas = loadCitas;
   })();
 
-  // ---- Mi perfil ----
+  // ---- Modal Reprogramar Cita (Cliente) ----
+  var currentRescheduleAppointment = null;
+
+  function openRescheduleModal(apt) {
+    currentRescheduleAppointment = apt;
+    var modal = document.getElementById('rescheduleModal');
+    if (!modal) return;
+
+    var sNombre = document.getElementById('rescheduleServicioNombre');
+    var eNombre = document.getElementById('rescheduleEspecialistaNombre');
+    var actFH   = document.getElementById('rescheduleActualFechaHora');
+    var idInput = document.getElementById('rescheduleReservaId');
+    var sInput  = document.getElementById('rescheduleServicioId');
+    var eInput  = document.getElementById('rescheduleEsteticistaId');
+    var fechaIn = document.getElementById('rescheduleFecha');
+    var horaSel = document.getElementById('rescheduleHora');
+    var errEl   = document.getElementById('rescheduleError');
+
+    if (sNombre) sNombre.textContent = apt.servicioNombre;
+    if (eNombre) eNombre.textContent = apt.esteticistaNombre || 'Asignado';
+    if (actFH) actFH.textContent = apt.fechaStr + ' a las ' + apt.horaStr;
+    if (idInput) idInput.value = apt.id;
+    if (sInput) sInput.value = apt.servicioId;
+    if (eInput) eInput.value = apt.esteticistaId;
+    if (errEl) errEl.style.display = 'none';
+
+    var today = new Date().toISOString().split('T')[0];
+    if (fechaIn) {
+      fechaIn.setAttribute('min', today);
+      fechaIn.value = today;
+    }
+
+    loadRescheduleSlots();
+
+    if (window.openModal) {
+      window.openModal('rescheduleModal');
+    }
+  }
+
+  function loadRescheduleSlots() {
+    var fechaIn = document.getElementById('rescheduleFecha');
+    var horaSel = document.getElementById('rescheduleHora');
+    var submitBtn = document.getElementById('confirmRescheduleBtn');
+    if (!fechaIn || !horaSel || !currentRescheduleAppointment) return;
+
+    var date = fechaIn.value;
+    if (!date) return;
+
+    var sId = currentRescheduleAppointment.servicioId || '';
+    var eId = currentRescheduleAppointment.esteticistaId || 0;
+
+    horaSel.innerHTML = '<option value="">Cargando horas disponibles...</option>';
+    horaSel.disabled = true;
+    if (submitBtn) submitBtn.disabled = true;
+
+    var params = 'date=' + encodeURIComponent(date) +
+                 '&servicio_id=' + encodeURIComponent(sId) +
+                 '&esteticista_id=' + encodeURIComponent(eId);
+
+    fetch('api/appointments/availability.php?' + params)
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        horaSel.disabled = false;
+        if (!data.success || !data.slots || data.slots.length === 0) {
+          horaSel.innerHTML = '<option value="">Sin horarios disponibles para esta fecha</option>';
+          if (submitBtn) submitBtn.disabled = true;
+          return;
+        }
+
+        horaSel.innerHTML = data.slots.map(function(s) {
+          return '<option value="' + s + '">' + s + '</option>';
+        }).join('');
+        if (submitBtn) submitBtn.disabled = false;
+      })
+      .catch(function() {
+        horaSel.disabled = false;
+        horaSel.innerHTML = '<option value="">Error al cargar horarios</option>';
+      });
+  }
+
+  (function initRescheduleEvents() {
+    var fechaIn = document.getElementById('rescheduleFecha');
+    if (fechaIn) {
+      fechaIn.addEventListener('change', loadRescheduleSlots);
+    }
+
+    var form = document.getElementById('rescheduleForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      var reservaId = document.getElementById('rescheduleReservaId').value;
+      var date = document.getElementById('rescheduleFecha').value;
+      var time = document.getElementById('rescheduleHora').value;
+      var submitBtn = document.getElementById('confirmRescheduleBtn');
+      var errEl = document.getElementById('rescheduleError');
+
+      if (!date) {
+        showError('rescheduleError', 'Por favor selecciona una fecha');
+        return;
+      }
+      if (!time || time.indexOf('Sin horarios') !== -1 || time.indexOf('Cargando') !== -1) {
+        showError('rescheduleError', 'Por favor selecciona un horario disponible');
+        return;
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Reprogramando...';
+      }
+
+      var body = {
+        reserva_id: parseInt(reservaId),
+        nueva_fecha: date,
+        nueva_hora: time,
+        date: date,
+        time: time,
+        id_esteticista: currentRescheduleAppointment ? currentRescheduleAppointment.esteticistaId : null,
+        csrf_token: csrfToken
+      };
+
+      fetch('api/appointments/reschedule.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      })
+      .then(function(res) {
+        return res.json().then(function(data) {
+          return { status: res.status, data: data };
+        });
+      })
+      .then(function(result) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirmar cambio';
+        }
+        var data = result.data;
+
+        if (result.status === 200 && data.success) {
+          showToast('¡Cita reprogramada exitosamente!', 'success');
+          var modal = document.getElementById('rescheduleModal');
+          if (modal && window.closeModal) window.closeModal(modal);
+          if (window.loadCitas) window.loadCitas();
+        } else {
+          var msg = data.error || 'Error al reprogramar la cita.';
+          showError('rescheduleError', msg);
+          showToast(msg, 'error');
+          loadRescheduleSlots();
+        }
+      })
+      .catch(function() {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Confirmar cambio';
+        }
+        showError('rescheduleError', 'Error de conexión. Intenta de nuevo.');
+        showToast('Error de conexión. Intenta de nuevo.', 'error');
+      });
+    });
+  })();
+
+  // ---- Modal Completar Cuenta (Guest a Cliente) ----
+  function openCompleteAccountModal(info) {
+    var modal = document.getElementById('completeAccountModal');
+    if (!modal) return;
+
+    var nIn = document.getElementById('completeNombre');
+    var cIn = document.getElementById('completeCorreo');
+    var tIn = document.getElementById('completeTelefono');
+    var pIn = document.getElementById('completePassword');
+    var pCIn = document.getElementById('completePasswordConfirm');
+    var err = document.getElementById('completeAccountError');
+
+    if (info) {
+      if (nIn && info.nombre) nIn.value = info.nombre;
+      if (cIn && info.correo) cIn.value = info.correo;
+      if (tIn && info.telefono) tIn.value = info.telefono;
+    }
+    if (pIn) pIn.value = '';
+    if (pCIn) pCIn.value = '';
+    if (err) err.style.display = 'none';
+
+    if (window.openModal) {
+      window.openModal('completeAccountModal');
+    }
+  }
+
+  (function initCompleteAccountEvents() {
+    var form = document.getElementById('completeAccountForm');
+    if (!form) return;
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      var nombre = document.getElementById('completeNombre').value.trim();
+      var correo = document.getElementById('completeCorreo').value.trim();
+      var telefono = document.getElementById('completeTelefono').value.trim();
+      var password = document.getElementById('completePassword').value;
+      var confirm = document.getElementById('completePasswordConfirm').value;
+      var btn = document.getElementById('completeAccountBtn');
+
+      if (!nombre) {
+        showError('completeAccountError', 'Por favor ingresa tu nombre completo');
+        return;
+      }
+      if (!correo || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)) {
+        showError('completeAccountError', 'Por favor ingresa un correo electrónico válido');
+        return;
+      }
+      if (!telefono || telefono.replace(/[\s+-]/g, '').length < 7) {
+        showError('completeAccountError', 'Por favor ingresa un número de teléfono válido (mínimo 7 dígitos)');
+        return;
+      }
+      // Tarea 21: Mínimo 8 caracteres
+      if (password.length < 8) {
+        showError('completeAccountError', 'La contraseña debe tener al menos 8 caracteres');
+        showToast('La contraseña debe tener al menos 8 caracteres', 'error');
+        return;
+      }
+      if (password !== confirm) {
+        showError('completeAccountError', 'Las contraseñas no coinciden');
+        showToast('Las contraseñas no coinciden', 'error');
+        return;
+      }
+
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Activando cuenta...';
+      }
+
+      var payload = {
+        name: nombre,
+        nombre: nombre,
+        email: correo,
+        correo: correo,
+        phone: telefono,
+        telefono: telefono,
+        password: password,
+        password_confirm: confirm,
+        csrf_token: csrfToken
+      };
+
+      // Intentar primero con complete-profile.php, con fallback a register.php
+      fetch('api/auth/complete-profile.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(res) {
+        if (res.status === 404) {
+          return fetch('api/auth/register.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: nombre,
+              email: correo,
+              password: password,
+              password_confirm: confirm,
+              csrf_token: csrfToken
+            })
+          }).then(function(r) { return r.json(); });
+        }
+        return res.json();
+      })
+      .then(function(data) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Activar mi cuenta';
+        }
+
+        if (data.success) {
+          if (data.csrf_token) csrfToken = data.csrf_token;
+          updateAllCsrfTokens(csrfToken);
+          setLoggedIn(data.user);
+          var modal = document.getElementById('completeAccountModal');
+          if (modal && window.closeModal) window.closeModal(modal);
+          showToast('¡Tu cuenta ha sido activada con éxito!', 'success');
+
+          var msgEl = document.getElementById('bookingMessage');
+          if (msgEl) {
+            msgEl.innerHTML = '<span style="color:#27ae60; font-weight:600;">¡Cuenta activada con éxito!</span> Ya puedes consultar y reprogramar tus citas en cualquier momento.';
+          }
+        } else {
+          showError('completeAccountError', data.error || 'Error al activar tu cuenta');
+          showToast(data.error || 'Error al activar tu cuenta', 'error');
+        }
+      })
+      .catch(function() {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Activar mi cuenta';
+        }
+        showError('completeAccountError', 'Error de conexión. Intenta de nuevo.');
+        showToast('Error de conexión. Intenta de nuevo.', 'error');
+      });
+    });
+  })();
+
+  // ---- Mi perfil (Tarea 17: Visualización y Tarea 21: Contraseña mín 8 chars) ----
   (function() {
     var btn = document.getElementById('openPerfilBtn');
     var form = document.getElementById('perfilForm');
@@ -703,6 +1353,7 @@
             document.getElementById('perfilTelefono').value = data.user.phone || '';
             document.getElementById('perfilPassActual').value = '';
             document.getElementById('perfilPassNueva').value = '';
+            updateAvatar(data.user);
           }
         });
     });
@@ -710,11 +1361,28 @@
     form.addEventListener('submit', function(e) {
       e.preventDefault();
 
+      var currentPassword = document.getElementById('perfilPassActual').value;
+      var newPassword = document.getElementById('perfilPassNueva').value;
+
+      // Tarea 21: Mínimo 8 caracteres en contraseña nueva si se proporciona
+      if (newPassword !== '') {
+        if (newPassword.length < 8) {
+          showError('perfilError', 'La nueva contraseña debe tener al menos 8 caracteres');
+          showToast('La nueva contraseña debe tener al menos 8 caracteres', 'error');
+          return;
+        }
+        if (!currentPassword) {
+          showError('perfilError', 'Ingresa tu contraseña actual para confirmar el cambio');
+          showToast('Ingresa tu contraseña actual para confirmar el cambio', 'warning');
+          return;
+        }
+      }
+
       var body = {
         name: document.getElementById('perfilNombre').value.trim(),
         phone: document.getElementById('perfilTelefono').value.trim(),
-        current_password: document.getElementById('perfilPassActual').value,
-        new_password: document.getElementById('perfilPassNueva').value,
+        current_password: currentPassword,
+        new_password: newPassword,
         csrf_token: csrfToken
       };
 
@@ -726,20 +1394,38 @@
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (data.success) {
-          showToast('Perfil actualizado', 'success');
+          showToast('Perfil actualizado con éxito', 'success');
           var modal = document.getElementById('perfilModal');
           if (modal) window.closeModal(modal);
           var nameEl = document.querySelector('.user-menu__name');
           if (nameEl) nameEl.textContent = body.name;
+          updateAvatar({ name: body.name });
+          autofillBookingForm({ name: body.name, phone: body.phone });
         } else {
           showError('perfilError', data.error || 'Error al guardar');
           showToast(data.error || 'Error al guardar', 'error');
         }
       })
       .catch(function() {
-        showToast('Error de conexion', 'error');
+        showToast('Error de conexión', 'error');
       });
     });
+  })();
+
+  // ---- Autofill inicial si el usuario ya tiene sesión activa ----
+  (function initSessionAutofill() {
+    var logged = document.getElementById('userMenuLogged');
+    if (logged && logged.style.display !== 'none') {
+      fetch('api/auth/profile.php')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.success && data.user) {
+            autofillBookingForm(data.user);
+            updateAvatar(data.user);
+          }
+        })
+        .catch(function() {});
+    }
   })();
 
   // ---- Favoritos ----

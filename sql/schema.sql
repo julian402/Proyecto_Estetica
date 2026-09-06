@@ -36,6 +36,7 @@ CREATE TABLE usuarios (
   correo         VARCHAR(150) NOT NULL UNIQUE,
   password_hash  VARCHAR(255) NOT NULL,
   telefono       VARCHAR(20),
+  es_invitado    BOOLEAN NOT NULL DEFAULT FALSE,
   estado_cuenta  BOOLEAN NOT NULL DEFAULT TRUE,
   creado_en      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_usuarios_rol
@@ -148,6 +149,7 @@ CREATE TABLE historial_estados (
   id_estado_anterior  INT NULL,
   id_estado_nuevo     INT NOT NULL,
   id_usuario_modifica INT NOT NULL,
+  motivo              VARCHAR(255) NULL,
   fecha_cambio        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_historial_reserva
     FOREIGN KEY (id_reserva) REFERENCES reservas(id_reserva)
@@ -173,6 +175,9 @@ CREATE TABLE logs_auditoria (
   id_usuario     INT NOT NULL,
   accion         VARCHAR(50) NOT NULL,
   tabla_afectada VARCHAR(50) NOT NULL,
+  registro_id    INT NULL,
+  detalles       TEXT NULL,
+  ip             VARCHAR(45) NULL,
   fecha_hora     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_logs_usuario
     FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
@@ -180,9 +185,24 @@ CREATE TABLE logs_auditoria (
 ) ENGINE=InnoDB;
 
 CREATE INDEX idx_logs_usuario ON logs_auditoria(id_usuario);
+CREATE INDEX idx_logs_tabla ON logs_auditoria(tabla_afectada);
 
 -- ============================================================
--- 9. FAVORITOS
+-- 9. LOGS DE CORREOS TRANSACCIONALES
+-- ============================================================
+CREATE TABLE correos_log (
+  id_correo    INT AUTO_INCREMENT PRIMARY KEY,
+  destinatario VARCHAR(150) NOT NULL,
+  asunto       VARCHAR(255) NOT NULL,
+  cuerpo_html  MEDIUMTEXT NOT NULL,
+  enviado_en   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  estado       VARCHAR(50) NOT NULL DEFAULT 'enviado'
+) ENGINE=InnoDB;
+
+CREATE INDEX idx_correos_destinatario ON correos_log(destinatario);
+
+-- ============================================================
+-- 10. FAVORITOS
 -- ============================================================
 CREATE TABLE favoritos (
     id_favorito    INT AUTO_INCREMENT PRIMARY KEY,
@@ -195,7 +215,7 @@ CREATE TABLE favoritos (
 ) ENGINE=InnoDB;
 
 -- ============================================================
--- 10. DATOS SEMILLA (seed data)
+-- 11. DATOS SEMILLA (seed data)
 -- ============================================================
 INSERT INTO roles (nombre_rol) VALUES
   ('Cliente'), ('SuperAdmin'), ('Recepcionista'), ('Esteticista');
@@ -217,17 +237,23 @@ INSERT INTO servicios (id_subcategoria, nombre_servicio, descripcion, duracion_m
   (2, 'Limpieza Profunda K-Derm', 'Doble limpieza, extraccion suave y ampolla calmante para renovar la piel sin irritar.', 60, 140000),
   (3, 'Masaje Relajante Hanul', 'Tecnica de liberacion miofascial con aceites tibios para aliviar tension acumulada.', 60, 150000);
 
--- Personal de ejemplo. "!" no es un hash valido: estas cuentas no pueden
--- iniciar sesion hasta que un administrador les asigne una contrasena.
--- El administrador inicial lo crea setup.php con una clave elegida al instalar.
-INSERT INTO usuarios (id_rol, nombre, correo, password_hash, telefono, estado_cuenta) VALUES
-  (3, 'Recepcion Hanul', 'recepcion@hanulbeauty.co', '!', '3000000001', TRUE),
-  (4, 'Sofia R.',        'sofia@hanulbeauty.co',     '!', '3000000002', TRUE),
-  (4, 'Diomar A.',       'diomar@hanulbeauty.co',    '!', '3000000003', TRUE),
-  (4, 'Juan D.',         'juan@hanulbeauty.co',      '!', '3000000004', TRUE);
+-- Usuarios iniciales con contrasenas hasheadas con bcrypt
+-- Admin Principal: Admin123
+-- Recepcion Hanul: Recep123
+-- Sofia R.: Sofia123
+-- Diomar A.: Diomar123
+-- Juan D.: Sofia123
+-- Cliente de Prueba: Cliente123
+INSERT INTO usuarios (id_rol, nombre, correo, password_hash, telefono, es_invitado, estado_cuenta) VALUES
+  (2, 'Admin Principal',   'admin@hanulbeauty.co',     '$2y$10$NLse.YL1bAV8J71Vru2FLOdu9OyuYdokMbgEDQwAv1ZTzBrdWJsra', '3000000000', FALSE, TRUE),
+  (3, 'Recepcion Hanul',   'recepcion@hanulbeauty.co', '$2y$10$9KfKh73n3dE.vM3pp4Vjd.XSc62Jf6a6vIB.TOWajrBcu09cyyUda', '3000000001', FALSE, TRUE),
+  (4, 'Sofia R.',          'sofia@hanulbeauty.co',     '$2y$10$O1WQ/YHL8sWSOE0QIsxbKeOhQuoaSwiTgdG8hAL2Q9FA/NYsIAb4e', '3000000002', FALSE, TRUE),
+  (4, 'Diomar A.',         'diomar@hanulbeauty.co',    '$2y$10$0twyKr6HC2e/my72QwKqke09W0RE.nkxQrb9u8G8yi5Q/ICvFw2uS', '3000000003', FALSE, TRUE),
+  (4, 'Juan D.',           'juan@hanulbeauty.co',      '$2y$10$O1WQ/YHL8sWSOE0QIsxbKeOhQuoaSwiTgdG8hAL2Q9FA/NYsIAb4e', '3000000004', FALSE, TRUE),
+  (1, 'Cliente de Prueba', 'cliente@ejemplo.com',      '$2y$10$oTLRrHF7.Kr0OFdJQNx0veqaZyx8F4XRS0H1jt8rGInP9drdxLG/6', '3001234567', FALSE, TRUE);
 
 -- ============================================================
--- 10. TRIGGERS - Validacion de doble agendamiento
+-- 12. TRIGGERS - Validacion de doble agendamiento
 -- ============================================================
 DELIMITER $$
 
@@ -306,11 +332,11 @@ CREATE TRIGGER trg_reservas_after_update_historial
 AFTER UPDATE ON reservas
 FOR EACH ROW
 BEGIN
-  IF NEW.id_estado <> OLD.id_estado THEN
+  IF NEW.id_estado <> OLD.id_estado AND (@skip_historial_trigger IS NULL OR @skip_historial_trigger = 0) THEN
     INSERT INTO historial_estados
-      (id_reserva, id_estado_anterior, id_estado_nuevo, id_usuario_modifica, fecha_cambio)
+      (id_reserva, id_estado_anterior, id_estado_nuevo, id_usuario_modifica, motivo, fecha_cambio)
     VALUES
-      (NEW.id_reserva, OLD.id_estado, NEW.id_estado, NEW.id_cliente, NOW());
+      (NEW.id_reserva, OLD.id_estado, NEW.id_estado, COALESCE(@app_usuario_modifica, NEW.id_cliente), COALESCE(@app_motivo, 'Cambio de estado automatico'), NOW());
   END IF;
 END$$
 
@@ -321,17 +347,19 @@ FOR EACH ROW
 BEGIN
   DECLARE v_choques INT DEFAULT 0;
 
-  SELECT COUNT(*) INTO v_choques
-  FROM reservas r
-  JOIN estados_reserva e ON e.id_estado = r.id_estado
-  WHERE r.id_esteticista = NEW.id_esteticista
-    AND e.nombre_estado NOT IN ('Cancelada', 'No_Show')
-    AND NEW.fecha_hora_inicio < r.fecha_hora_fin
-    AND NEW.fecha_hora_fin   > r.fecha_hora_inicio;
+  IF (@skip_ausencias_trigger IS NULL OR @skip_ausencias_trigger = 0) THEN
+    SELECT COUNT(*) INTO v_choques
+    FROM reservas r
+    JOIN estados_reserva e ON e.id_estado = r.id_estado
+    WHERE r.id_esteticista = NEW.id_esteticista
+      AND e.nombre_estado NOT IN ('Cancelada', 'No_Show')
+      AND NEW.fecha_hora_inicio < r.fecha_hora_fin
+      AND NEW.fecha_hora_fin   > r.fecha_hora_inicio;
 
-  IF v_choques > 0 THEN
-    SIGNAL SQLSTATE '45000'
-      SET MESSAGE_TEXT = 'No se puede bloquear: ya existe una reserva activa del esteticista en ese rango.';
+    IF v_choques > 0 THEN
+      SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'No se puede bloquear: ya existe una reserva activa del esteticista en ese rango.';
+    END IF;
   END IF;
 END$$
 
