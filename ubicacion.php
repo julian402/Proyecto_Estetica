@@ -19,7 +19,7 @@ require __DIR__ . '/templates/header.php';
       <div class="container location-hero__content">
         <p class="section__label">NUESTRO ESTUDIO</p>
         <h1>Un refugio de calma<br>en el norte de Bogota</h1>
-        <p>Un espacio privado, luminoso y diseñado para cuidar tu piel sin prisa.</p>
+        <p>Un espacio privado y luminoso para tus tratamientos de estetica y bienestar.</p>
       </div>
     </section>
 
@@ -43,7 +43,7 @@ require __DIR__ . '/templates/header.php';
           <article class="location-card">
             <span class="location-card__number">02</span>
             <h3>Horarios</h3>
-            <p>Lunes a viernes: 9:00 a. m. – 7:00 p. m.<br>Sabados: 9:00 a. m. – 5:00 p. m.</p>
+            <p>Lunes a sabado: 10:00 a. m. – 5:00 p. m.</p>
             <span>Atendemos con cita previa</span>
           </article>
           <article class="location-card">
@@ -74,7 +74,7 @@ require __DIR__ . '/templates/header.php';
           </div>
           <div class="arrival__item">
             <h3>Tu primera cita</h3>
-            <p>Llega diez minutos antes para realizar una breve valoracion de piel.</p>
+            <p>Llega diez minutos antes para realizar una breve valoracion personalizada de tu tratamiento.</p>
           </div>
           <a href="index.php#agendar" class="btn btn--primary">Reservar mi visita</a>
         </div>

@@ -90,6 +90,13 @@ if ($esteticId <= 0) {
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
     json_response(['error' => 'Formato de fecha invalido'], 422);
 }
+$dateObject = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+if (!$dateObject || $dateObject->format('Y-m-d') !== $date) {
+    json_response(['error' => 'Fecha invalida'], 422);
+}
+if ((int) $dateObject->format('w') === 0) {
+    json_response(['error' => 'No atendemos los domingos. Selecciona una fecha de lunes a sabado.'], 422);
+}
 
 $timeClean = strtolower(trim($time));
 $dateTime = date_create_from_format('Y-m-d g:i a', $date . ' ' . $timeClean);

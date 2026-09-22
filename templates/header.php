@@ -9,8 +9,8 @@
  *   $activeNav       Enlace activo: tratamientos | galeria | nosotros | ubicacion
  *   $isHome          true en index.php (los anclas son locales)
  */
-$pageTitle       = $pageTitle       ?? 'Hanul Beauty - Cuidado Facial Coreano en Bogota';
-$pageDescription = $pageDescription ?? 'Estudio de cuidado facial coreano en Bogota. Agenda tu ritual K-Beauty en Hanul Beauty.';
+$pageTitle       = $pageTitle       ?? 'Hanul Beauty - Estetica y Bienestar Coreano en Bogota';
+$pageDescription = $pageDescription ?? 'Estudio de estetica y bienestar inspirado en Corea en Bogota. Conoce tratamientos faciales, corporales y rituales de relajacion.';
 $bodyClass       = $bodyClass       ?? '';
 $activeNav       = $activeNav       ?? '';
 $isHome          = $isHome          ?? true;

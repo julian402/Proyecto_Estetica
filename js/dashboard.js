@@ -26,6 +26,10 @@
     return div.innerHTML;
   }
 
+  function isSunday(dateValue) {
+    return !!dateValue && new Date(dateValue + 'T12:00:00').getDay() === 0;
+  }
+
   function paginateTable(tbody, pagerId) {
     if (!tbody) return;
 
@@ -545,6 +549,11 @@
     var estId  = reprogEspecialista ? reprogEspecialista.value : '';
 
     if (!servId || !fecha) return;
+    if (isSunday(fecha)) {
+      reprogHora.innerHTML = '<option value="">No atendemos los domingos</option>';
+      if (reprogSlotsHelp) reprogSlotsHelp.textContent = 'Selecciona una fecha de lunes a sabado.';
+      return;
+    }
 
     reprogHora.innerHTML = '<option value="">Consultando horarios...</option>';
     if (reprogSlotsHelp) reprogSlotsHelp.textContent = 'Buscando horarios disponibles sin conflictos...';
@@ -575,7 +584,14 @@
   }
 
   if (reprogFecha) {
-    reprogFecha.addEventListener('change', fetchAvailableSlotsForReprog);
+    reprogFecha.addEventListener('change', function() {
+      if (isSunday(reprogFecha.value)) {
+        reprogFecha.value = '';
+        showToast('No atendemos los domingos. Selecciona una fecha de lunes a sabado.', 'warning');
+        return;
+      }
+      fetchAvailableSlotsForReprog();
+    });
   }
   if (reprogEspecialista) {
     reprogEspecialista.addEventListener('change', fetchAvailableSlotsForReprog);

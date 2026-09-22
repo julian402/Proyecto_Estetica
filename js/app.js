@@ -46,6 +46,17 @@
     toast.querySelector('.toast__close').addEventListener('click', dismiss);
     setTimeout(dismiss, 4500);
   }
+
+  function isSunday(dateValue) {
+    if (!dateValue) return false;
+    return new Date(dateValue + 'T12:00:00').getDay() === 0;
+  }
+
+  function nextBookingDate() {
+    var date = new Date();
+    if (date.getDay() === 0) date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+  }
   (function() {
     var links = document.querySelectorAll('.nav__link');
     var page = window.location.pathname.split('/').pop() || 'index.php';
@@ -876,7 +887,7 @@
     var selectServ = document.getElementById('tratamiento');
     var fechaInput = document.getElementById('fecha');
     var horaSelect = document.getElementById('hora');
-    var today = new Date().toISOString().split('T')[0];
+    var today = nextBookingDate();
 
     if (fechaInput) {
       fechaInput.setAttribute('min', today);
@@ -959,7 +970,7 @@
       }
 
       // Fecha: hoy (nunca vacía, para que el selector de horas pueda cargar)
-      if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+      if (fechaInput) fechaInput.value = nextBookingDate();
 
       // Hora: se repuebla con loadAvailableSlots()
       if (horaSelect) horaSelect.innerHTML = '<option value="">Selecciona fecha primero</option>';
@@ -988,6 +999,13 @@
     }
     if (fechaInput) {
       fechaInput.addEventListener('change', function() {
+        if (isSunday(fechaInput.value)) {
+          fechaInput.value = '';
+          horaSelect.innerHTML = '<option value="">No atendemos los domingos</option>';
+          showToast('No atendemos los domingos. Selecciona una fecha de lunes a sabado.', 'warning');
+          if (typeof updateBookingSummary === 'function') updateBookingSummary();
+          return;
+        }
         loadAvailableSlots();
         if (typeof updateBookingSummary === 'function') updateBookingSummary();
       });
@@ -1036,6 +1054,11 @@
         showToast('La fecha de la reserva debe ser para hoy o un día futuro.', 'warning');
         if (fechaInput) fechaInput.focus();
         if (typeof setStepperStep === 'function') setStepperStep(2);
+        return;
+      }
+      if (isSunday(fecha)) {
+        showToast('No atendemos los domingos. Selecciona una fecha de lunes a sabado.', 'warning');
+        if (fechaInput) fechaInput.focus();
         return;
       }
       if (!hora || hora.indexOf('Sin horarios') !== -1 || hora.indexOf('Cargando') !== -1 || hora.indexOf('Selecciona') !== -1) {
@@ -1347,7 +1370,7 @@
     if (eInput) eInput.value = apt.esteticistaId;
     if (errEl) errEl.style.display = 'none';
 
-    var today = new Date().toISOString().split('T')[0];
+    var today = nextBookingDate();
     if (fechaIn) {
       fechaIn.setAttribute('min', today);
       fechaIn.value = today;
@@ -1368,6 +1391,12 @@
 
     var date = fechaIn.value;
     if (!date) return;
+    if (isSunday(date)) {
+      horaSel.innerHTML = '<option value="">No atendemos los domingos</option>';
+      horaSel.disabled = true;
+      if (submitBtn) submitBtn.disabled = true;
+      return;
+    }
 
     var sId = currentRescheduleAppointment.servicioId || '';
     var eId = currentRescheduleAppointment.esteticistaId || 0;
@@ -1404,7 +1433,14 @@
   (function initRescheduleEvents() {
     var fechaIn = document.getElementById('rescheduleFecha');
     if (fechaIn) {
-      fechaIn.addEventListener('change', loadRescheduleSlots);
+      fechaIn.addEventListener('change', function() {
+        if (isSunday(fechaIn.value)) {
+          fechaIn.value = '';
+          showError('rescheduleError', 'No atendemos los domingos. Selecciona una fecha de lunes a sabado.');
+          return;
+        }
+        loadRescheduleSlots();
+      });
     }
 
     var form = document.getElementById('rescheduleForm');
@@ -1421,6 +1457,10 @@
 
       if (!date) {
         showError('rescheduleError', 'Por favor selecciona una fecha');
+        return;
+      }
+      if (isSunday(date)) {
+        showError('rescheduleError', 'No atendemos los domingos. Selecciona una fecha de lunes a sabado.');
         return;
       }
       if (!time || time.indexOf('Sin horarios') !== -1 || time.indexOf('Cargando') !== -1) {

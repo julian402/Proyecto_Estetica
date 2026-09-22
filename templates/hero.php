@@ -1,15 +1,15 @@
   <section class="hero">
     <div class="container hero__inner">
       <div class="hero__content">
-        <p class="hero__label">CUIDADO FACIAL Y CORPORAL COREANO &middot; BOGOTA</p>
+        <p class="hero__label">BIENESTAR Y ESTETICA COREANA &middot; BOGOTA</p>
         <h1 class="hero__title">
           Piel luminosa,<br>
           <em>ritual</em> Glass Skin
         </h1>
         <p class="hero__description">
-          Protocolos coreanos de hidratacion profunda, cuidado
-          facial personalizado y tratamientos corporales de relajacion,
-          disenados para revelar una piel con luz propia — sin prisa, sin excesos.
+          Tratamientos faciales personalizados, masajes de relajacion,
+          exfoliacion corporal y rituales de bienestar inspirados en Corea,
+          disenados para cuidar tu piel y renovar tu cuerpo de forma integral.
         </p>
         <div class="hero__actions">
           <a href="#tratamientos" class="btn btn--primary">Explorar Servicios</a>

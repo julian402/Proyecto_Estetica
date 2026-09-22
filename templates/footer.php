@@ -7,9 +7,9 @@
             <span class="logo__text">Hanul Beauty</span>
           </a>
           <p class="footer__description">
-            Estetica de cuidado facial coreano en
-            Bogota. Rituales de piel disenados para
-            el largo plazo.
+            Estetica y bienestar inspirados en Corea
+            para Bogota. Tratamientos faciales,
+            corporales y rituales de relajacion.
           </p>
         </div>
         <div class="footer__col">
@@ -32,7 +32,7 @@
           <ul class="footer__links">
             <li>Bogota, Colombia</li>
             <li><a href="mailto:hola@hanulbeauty.co">hola@hanulbeauty.co</a></li>
-            <li>Lun–Sab 9am–7pm</li>
+            <li>Lun–Sab 10:00 a. m.–5:00 p. m.</li>
           </ul>
         </div>
       </div>

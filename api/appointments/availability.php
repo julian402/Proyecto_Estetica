@@ -17,6 +17,14 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $servicioId <= 0) {
     json_response(['error' => 'Parametros invalidos'], 422);
 }
 
+$dateObject = DateTimeImmutable::createFromFormat('!Y-m-d', $date);
+if (!$dateObject || $dateObject->format('Y-m-d') !== $date) {
+    json_response(['error' => 'Fecha invalida'], 422);
+}
+if ((int) $dateObject->format('w') === 0) {
+    json_response(['success' => true, 'slots' => [], 'available_slots' => [], 'message' => 'No atendemos los domingos']);
+}
+
 if ($date < date('Y-m-d')) {
     json_response(['success' => true, 'slots' => [], 'available_slots' => []]);
 }
