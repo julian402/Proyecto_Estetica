@@ -2899,6 +2899,19 @@ a.sidebar__item {
 .dashboard__table tbody tr:last-child td:first-child { border-bottom-left-radius: var(--radius-surface); }
 .dashboard__table tbody tr:last-child td:last-child { border-bottom-right-radius: var(--radius-surface); }
 
+#viewDashboard .dashboard__table-wrap {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+#viewDashboard .dashboard__table th:first-child,
+#viewDashboard .dashboard__table th:last-child,
+#viewDashboard .dashboard__table tbody tr:last-child td:first-child,
+#viewDashboard .dashboard__table tbody tr:last-child td:last-child {
+  border-radius: 0;
+}
+
 .dashboard__table th {
   position: sticky;
   top: 0;
