@@ -861,15 +861,11 @@
       .then(function(res) { return res.json(); })
       .then(function(data) {
         if (data.success) {
-          setLoggedOut();
-          var dropdown = document.getElementById('userMenuDropdown');
-          if (dropdown) dropdown.classList.remove('user-menu__dropdown--open');
-          showToast('Sesion cerrada correctamente', 'info');
+          window.location.replace('index.php');
         }
       })
       .catch(function() {
-        setLoggedOut();
-        showToast('Sesion cerrada', 'info');
+        window.location.replace('index.php');
       });
     });
   })();
