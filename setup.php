@@ -62,6 +62,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confi
     $userRaw = $_POST['user'] ?? 'root';
     $pass    = $_POST['pass'] ?? '';
     $charset = 'utf8mb4';
+    $timezoneRaw = $_POST['timezone'] ?? 'America/Bogota';
+    $timezone = (is_string($timezoneRaw) && in_array($timezoneRaw, timezone_identifiers_list(), true))
+        ? $timezoneRaw
+        : 'America/Bogota';
 
     if (!is_string($hostRaw) || !is_string($dbnameRaw) || !is_string($userRaw) || !is_string($pass)) {
         http_response_code(422);
@@ -83,6 +87,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confi
     $content .= "define('DB_USER', " . var_export($user, true) . ");\n";
     $content .= "define('DB_PASS', " . var_export($pass, true) . ");\n";
     $content .= "define('DB_CHARSET', " . var_export($charset, true) . ");\n";
+    $content .= "\n";
+    $content .= "// Zona horaria del estudio. Se fija aqui porque la de php.ini\n";
+    $content .= "// no tiene por que coincidir con la del negocio.\n";
+    $content .= "define('APP_TIMEZONE', " . var_export($timezone, true) . ");\n";
 
     if (@file_put_contents($configFile, $content, LOCK_EX)) {
         @chmod($configFile, 0600);
@@ -466,6 +474,14 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
           <label class="form-label" for="pass">Contrasena</label>
           <input type="password" class="form-input" id="pass" name="pass" value="" placeholder="Vacio por defecto en XAMPP">
         </div>
+        <div class="form-group">
+          <label class="form-label" for="timezone">Zona horaria</label>
+          <select class="form-input" id="timezone" name="timezone">
+            <option value="America/Bogota" selected>America/Bogota (Colombia)</option>
+            <option value="UTC">UTC</option>
+          </select>
+          <p class="form-hint">Se aplicara a los horarios de las citas y a los triggers de MySQL.</p>
+        </div>
         <button type="submit" class="btn btn--primary">Guardar configuracion</button>
       </form>
 
@@ -488,7 +504,7 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
         Se ejecutara <code>sql/schema.sql</code> que crea:
       </p>
       <ul style="font-size: 0.85rem; color: #666; margin-bottom: 1.5rem; padding-left: 1.2rem;">
-        <li>10 tablas (usuarios, servicios, reservas, etc.)</li>
+        <li>12 tablas (usuarios, servicios, reservas, bloqueos, correos, favoritos, etc.)</li>
         <li>4 triggers de validacion de horarios</li>
         <li>1 vista de agenda</li>
         <li>Datos semilla (roles, estados, servicios, esteticistas)</li>
