@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/models/User.php';
+require_once __DIR__ . '/models/Treatment.php';
 
 start_session();
 
@@ -14,9 +15,10 @@ if (in_array((int) $currentUser['id_rol'], [2, 3, 4], true)) {
 }
 
 $esteticistas = User::getEsteticistas();
+$treatments = Treatment::getAll();
 
 // Vista inicial segun el enlace de entrada (?v=citas|perfil|favoritos)
-$vistas = ['citas' => 'viewCitas', 'perfil' => 'viewPerfil', 'favoritos' => 'viewFavoritos'];
+$vistas = ['citas' => 'viewCitas', 'perfil' => 'viewPerfil', 'favoritos' => 'viewFavoritos', 'agendar' => 'viewAgendar'];
 $vistaInicial = $vistas[$_GET['v'] ?? ''] ?? 'viewCitas';
 
 $iniciales = mb_strtoupper(mb_substr($currentUser['nombre'], 0, 1));
@@ -26,6 +28,7 @@ $encabezados = [
     'viewCitas'     => ['Mis citas', 'Consulta, reprograma o cancela tus reservas'],
     'viewPerfil'    => ['Mi perfil', 'Tus datos personales y preferencias de cuenta'],
     'viewFavoritos' => ['Tratamientos favoritos', 'Tus tratamientos guardados para agendar con un clic'],
+    'viewAgendar'   => ['Agendar cita', 'Elige tu tratamiento, horario y especialista'],
 ];
 [$tituloInicial, $subtituloInicial] = $encabezados[$vistaInicial];
 
@@ -103,10 +106,11 @@ function cuenta_icon(string $name): string {
           <?php echo cuenta_icon('home'); ?>
           <span>Volver al inicio</span>
         </a>
-        <a class="sidebar__item" href="index.php#agendar">
+        <button class="sidebar__item<?php echo $vistaInicial === 'viewAgendar' ? ' sidebar__item--active' : ''; ?>"
+                id="openAgendarBtn" type="button" data-view="viewAgendar">
           <?php echo cuenta_icon('calendar'); ?>
           <span>Agendar cita</span>
-        </a>
+        </button>
       </nav>
 
       <div class="sidebar__footer">
@@ -209,6 +213,12 @@ function cuenta_icon(string $name): string {
               <p class="modal__empty">Cargando favoritos...</p>
             </div>
           </div>
+        </section>
+        <section class="view" id="viewAgendar"
+                 data-view-title="Agendar cita"
+                 data-view-subtitle="Elige tu tratamiento, horario y especialista"
+                 <?php echo $vistaInicial === 'viewAgendar' ? '' : 'hidden'; ?>>
+          <?php require __DIR__ . '/templates/booking.php'; ?>
         </section>
 
       </main>

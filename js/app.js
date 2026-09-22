@@ -966,7 +966,7 @@
 
       // Datos de contacto: solo se limpian para invitados
       var loggedBox = document.getElementById('userMenuLogged');
-      var isUserLogged = loggedBox && loggedBox.style.display !== 'none';
+      var isUserLogged = document.body.classList.contains('admin-body') || (loggedBox && loggedBox.style.display !== 'none');
       if (!isUserLogged) {
         ['bookNombre', 'bookCorreo', 'bookTelefono'].forEach(function(id) {
           var el = document.getElementById(id);
@@ -1123,8 +1123,9 @@
           };
 
           if (messageEl) {
-            var isUserLogged = document.getElementById('userMenuLogged') &&
-                               document.getElementById('userMenuLogged').style.display !== 'none';
+            var isUserLogged = document.body.classList.contains('admin-body') ||
+                               (document.getElementById('userMenuLogged') &&
+                                document.getElementById('userMenuLogged').style.display !== 'none');
             if (!isUserLogged) {
               messageEl.innerHTML = '<span style="color:#27ae60; font-weight:600;">¡Cita agendada con éxito!</span> ' +
                 '¿Deseas <button type="button" id="linkCompletarCuenta" style="color:var(--color-olive); font-weight:600; text-decoration:underline; background:none; border:none; cursor:pointer; padding:0; font-size:inherit;">completar tu cuenta</button> para consultar y reprogramar tu cita en cualquier momento?';
@@ -1137,7 +1138,15 @@
               }
             } else {
               messageEl.innerHTML = '<span style="color:#27ae60; font-weight:600;">¡Cita agendada con éxito!</span> ' +
-                'Puedes consultarla en <a href="cuenta.php?v=citas" style="color:var(--color-olive); font-weight:600;">Mis citas</a>.';
+                'Puedes consultarla en <button type="button" id="linkMisCitas" style="color:var(--color-olive); font-weight:600; text-decoration:underline; background:none; border:0; cursor:pointer; padding:0; font-size:inherit;">Mis citas</button>.';
+              var citasLink = document.getElementById('linkMisCitas');
+              if (citasLink) {
+                citasLink.addEventListener('click', function() {
+                  if (window.PanelUI) window.PanelUI.showView('viewCitas');
+                  var citasButton = document.getElementById('openCitasBtn');
+                  if (citasButton) citasButton.click();
+                });
+              }
             }
           }
 
@@ -1202,13 +1211,12 @@
             container.innerHTML = '<div class="modal__empty">' +
               '<p style="margin-bottom:8px; font-weight:500; font-size:1rem; color:var(--color-text);">No tienes citas agendadas actualmente.</p>' +
               '<p style="margin-bottom:20px; font-size:0.88rem; color:var(--color-text-muted);">Descubre nuestros tratamientos faciales y reserva tu momento de cuidado coreano.</p>' +
-              '<a href="#agendar" class="btn btn--primary btn--sm" data-close-citas>Agendar una cita</a>' +
+              '<button type="button" class="btn btn--primary btn--sm" data-open-booking>Agendar una cita</button>' +
             '</div>';
-            var closeA = container.querySelector('[data-close-citas]');
-            if (closeA) {
-              closeA.addEventListener('click', function() {
-                var modal = document.getElementById('citasModal');
-                if (modal && window.closeModal) window.closeModal(modal);
+            var openBooking = container.querySelector('[data-open-booking]');
+            if (openBooking) {
+              openBooking.addEventListener('click', function() {
+                if (window.PanelUI) window.PanelUI.showView('viewAgendar');
               });
             }
             return;
