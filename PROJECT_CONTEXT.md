@@ -10,7 +10,7 @@ Aplicación web para un centro de estética coreana en Bogotá. Permite a client
 - URL: `http://localhost/Proyecto_Estetica/`
 - Servidor: XAMPP con Apache y MySQL.
 - PHP: 8.2 sin framework.
-- Base de datos: MySQL/MariaDB, esquema `kbeauty_db`.
+- Base de datos: MySQL, esquema `kbeauty_db`.
 - Zona horaria: `America/Bogota` en `config/database.php` mediante `APP_TIMEZONE`.
 
 ## Arquitectura

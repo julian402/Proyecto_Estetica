@@ -1,6 +1,6 @@
 -- ============================================================
 -- Sistema de Gestion K-Beauty (Hanul Beauty)
--- Script de base de datos MySQL / MariaDB (compatible XAMPP)
+-- Script de base de datos MySQL (compatible con XAMPP)
 -- Basado en el DER/MER del proyecto (CodigoUML_DER.txt / MER.txt)
 -- ============================================================
 -- Como ejecutar:

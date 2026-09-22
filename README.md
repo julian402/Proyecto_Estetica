@@ -5,7 +5,7 @@ Sistema web de gestion para centro de estetica coreana en Bogota. Permite a los 
 ## Tecnologias
 
 - **Backend:** PHP 8.2 (sin framework)
-- **Base de datos:** MySQL / MariaDB
+- **Base de datos:** MySQL
 - **Servidor:** Apache (XAMPP)
 - **Frontend:** HTML5, CSS3, JavaScript vanilla
 
