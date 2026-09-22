@@ -39,6 +39,7 @@
   --radius-lg: 16px;
   --radius-xl: 24px;
   --radius-full: 999px;
+  --radius-surface: 12px;
 }
 
 html {
@@ -2777,8 +2778,19 @@ a.sidebar__item {
 .panel {
   background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-surface);
   overflow: hidden;
+}
+
+/* Superficies del panel: un único radio evita esquinas desiguales. */
+.dashboard__stat-card,
+.dashboard__table-wrap,
+.modal__content,
+.modal__panel,
+.modal__summary-box,
+.report-kpi-card,
+.report-box {
+  border-radius: var(--radius-surface);
 }
 
 .panel__head {
@@ -2875,7 +2887,22 @@ a.sidebar__item {
 /* ---------- Tabla ---------- */
 .dashboard__table-wrap {
   overflow-x: auto;
+  overflow-y: hidden;
+  isolation: isolate;
 }
+
+.panel--view .modal__scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-surface);
+  isolation: isolate;
+}
+
+.dashboard__table th:first-child { border-top-left-radius: var(--radius-surface); }
+.dashboard__table th:last-child { border-top-right-radius: var(--radius-surface); }
+.dashboard__table tbody tr:last-child td:first-child { border-bottom-left-radius: var(--radius-surface); }
+.dashboard__table tbody tr:last-child td:last-child { border-bottom-right-radius: var(--radius-surface); }
 
 .dashboard__table th {
   position: sticky;
