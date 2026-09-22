@@ -309,7 +309,7 @@ function send_appointment_confirmation(array $appointmentData, array $clientData
         <div class="guest-banner">
           <h4>¿Primera vez en Hanul Beauty?</h4>
           <p>Tu cita ha sido agendada con éxito. Para consultar tus reservas, reprogramar fácilmente y acumular puntos, completa tu contraseña en un solo clic:</p>
-          <a href="{$baseUrl}/index.php?completar=1&amp;email={$encodedEmail}" class="btn" style="padding: 10px 18px; font-size: 13px;">Completar mi perfil</a>
+          <a href="{$baseUrl}/completar-perfil.php?email={$encodedEmail}" class="btn" style="padding: 10px 18px; font-size: 13px;">Completar mi perfil</a>
         </div>
 HTML;
     }

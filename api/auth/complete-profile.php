@@ -14,11 +14,16 @@ $input = json_input();
 $emailRaw = $input['email'] ?? '';
 $password = $input['password'] ?? '';
 $confirm  = $input['password_confirm'] ?? '';
+$token    = $input['csrf_token'] ?? '';
 $nameRaw  = $input['name'] ?? null;
 $phoneRaw = $input['phone'] ?? $input['telefono'] ?? null;
 
-if (!is_string($emailRaw) || !is_string($password) || !is_string($confirm)) {
+if (!is_string($emailRaw) || !is_string($password) || !is_string($confirm) || !is_string($token)) {
     json_response(['error' => 'Datos invalidos'], 422);
+}
+
+if (!verify_csrf($token)) {
+    json_response(['error' => 'Token de seguridad invalido. Recarga la pagina.'], 403);
 }
 
 $email = strtolower(trim($emailRaw));
