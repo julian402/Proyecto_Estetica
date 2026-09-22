@@ -230,6 +230,11 @@ function strftime_es(): string {
             </div>
 
             <div class="filters__field">
+              <label class="filters__label" for="filterCliente">Cliente</label>
+              <input type="search" class="form-input" id="filterCliente" placeholder="Nombre, correo o teléfono" autocomplete="off">
+            </div>
+
+            <div class="filters__field">
               <label class="filters__label" for="filterEstado">Estado</label>
               <select class="form-select" id="filterEstado">
                 <option value="">Todos los estados</option>

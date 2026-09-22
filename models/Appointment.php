@@ -156,8 +156,7 @@ class Appointment {
      * Retorna todas las reservas con soporte de filtros: fecha, estado, esteticista y servicio.
      * Tarea 18: Filtro por servicio.
      */
-    public static function getAll(?string $filterDate = null, ?int $filterEstado = null, ?int $filterEsteticista = null, ?int $filterServicio = null): array {
-        $db = getDB();
+    private static function adminFilters(?string $filterDate, ?int $filterEstado, ?int $filterEsteticista, ?int $filterServicio, ?string $filterCliente): array {
         $where = [];
         $params = [];
 
@@ -177,6 +176,20 @@ class Appointment {
             $where[] = 'r.id_servicio = :id_servicio';
             $params['id_servicio'] = $filterServicio;
         }
+        if ($filterCliente !== null && trim($filterCliente) !== '') {
+            $where[] = '(cli.nombre LIKE :cliente_nombre OR cli.correo LIKE :cliente_correo OR cli.telefono LIKE :cliente_telefono)';
+            $search = '%' . trim($filterCliente) . '%';
+            $params['cliente_nombre'] = $search;
+            $params['cliente_correo'] = $search;
+            $params['cliente_telefono'] = $search;
+        }
+
+        return [$where, $params];
+    }
+
+    public static function getAll(?string $filterDate = null, ?int $filterEstado = null, ?int $filterEsteticista = null, ?int $filterServicio = null, ?string $filterCliente = null): array {
+        $db = getDB();
+        [$where, $params] = self::adminFilters($filterDate, $filterEstado, $filterEsteticista, $filterServicio, $filterCliente);
 
         $sql = 'SELECT r.id_reserva, r.id_cliente, r.id_esteticista, r.id_servicio,
                        r.fecha_hora_inicio, r.fecha_hora_fin, r.creado_en,
@@ -199,6 +212,56 @@ class Appointment {
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
+    }
+
+    public static function getPaginated(int $page, int $limit, ?string $filterDate = null, ?int $filterEstado = null, ?int $filterEsteticista = null, ?int $filterServicio = null, ?string $filterCliente = null): array {
+        $db = getDB();
+        [$where, $params] = self::adminFilters($filterDate, $filterEstado, $filterEsteticista, $filterServicio, $filterCliente);
+        $whereSql = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+
+        $count = $db->prepare(
+            'SELECT COUNT(*)
+             FROM reservas r
+             JOIN usuarios cli ON r.id_cliente = cli.id_usuario' . $whereSql
+        );
+        $count->execute($params);
+        $total = (int) $count->fetchColumn();
+
+        $page = max(1, $page);
+        $limit = max(1, min($limit, 100));
+        $totalPages = max(1, (int) ceil($total / $limit));
+        $page = min($page, $totalPages);
+        $offset = ($page - 1) * $limit;
+
+        $sql = 'SELECT r.id_reserva, r.id_cliente, r.id_esteticista, r.id_servicio,
+                       r.fecha_hora_inicio, r.fecha_hora_fin, r.creado_en,
+                       s.nombre_servicio, s.duracion_minutos, s.precio,
+                       er.nombre_estado, er.id_estado,
+                       est.nombre AS nombre_esteticista,
+                       cli.nombre AS nombre_cliente, cli.correo AS correo_cliente, cli.telefono AS telefono_cliente
+                FROM reservas r
+                JOIN servicios s ON r.id_servicio = s.id_servicio
+                JOIN estados_reserva er ON r.id_estado = er.id_estado
+                JOIN usuarios est ON r.id_esteticista = est.id_usuario
+                JOIN usuarios cli ON r.id_cliente = cli.id_usuario' .
+                $whereSql .
+                ' ORDER BY r.fecha_hora_inicio DESC LIMIT :limit OFFSET :offset';
+
+        $stmt = $db->prepare($sql);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue(':' . $key, $value);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return [
+            'reservas' => $stmt->fetchAll(),
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'total_pages' => $totalPages,
+        ];
     }
 
     /**

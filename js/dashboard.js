@@ -26,6 +26,104 @@
     return div.innerHTML;
   }
 
+  function paginateTable(tbody, pagerId) {
+    if (!tbody) return;
+
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+    var table = tbody.closest('table');
+    var pager = document.getElementById(pagerId);
+    if (!table) return;
+
+    if (!pager) {
+      pager = document.createElement('nav');
+      pager.id = pagerId;
+      pager.className = 'table-pagination';
+      pager.setAttribute('aria-label', 'Paginación de tabla');
+      table.parentElement.insertAdjacentElement('afterend', pager);
+    }
+
+    if (rows.length <= 10) {
+      rows.forEach(function(row) { row.hidden = false; });
+      pager.innerHTML = '';
+      pager.hidden = true;
+      return;
+    }
+
+    var totalPages = Math.ceil(rows.length / 10);
+    var currentPage = 1;
+
+    function renderPage() {
+      var start = (currentPage - 1) * 10;
+      rows.forEach(function(row, index) {
+        row.hidden = index < start || index >= start + 10;
+      });
+
+      pager.hidden = false;
+      pager.innerHTML = '<span class="table-pagination__summary">Mostrando ' + (start + 1) + '–' + Math.min(start + 10, rows.length) + ' de ' + rows.length + '</span>' +
+        '<div class="table-pagination__controls">' +
+          '<button type="button" class="table-pagination__button" data-page="prev"' + (currentPage === 1 ? ' disabled' : '') + '>Anterior</button>' +
+          Array.from({ length: totalPages }, function(_, index) {
+            var page = index + 1;
+            return '<button type="button" class="table-pagination__button' + (page === currentPage ? ' table-pagination__button--active' : '') + '" data-page="' + page + '"' + (page === currentPage ? ' aria-current="page"' : '') + '>' + page + '</button>';
+          }).join('') +
+          '<button type="button" class="table-pagination__button" data-page="next"' + (currentPage === totalPages ? ' disabled' : '') + '>Siguiente</button>' +
+        '</div>';
+
+      pager.querySelectorAll('[data-page]').forEach(function(button) {
+        button.addEventListener('click', function() {
+          var target = this.dataset.page;
+          if (target === 'prev') currentPage--;
+          else if (target === 'next') currentPage++;
+          else currentPage = parseInt(target, 10);
+          renderPage();
+        });
+      });
+    }
+
+    renderPage();
+  }
+
+  function clearTablePagination(pagerId) {
+    var pager = document.getElementById(pagerId);
+    if (pager) {
+      pager.hidden = true;
+      pager.innerHTML = '';
+    }
+  }
+
+  function renderServerPagination(tbody, pagerId, pagination, onPageChange) {
+    if (!tbody || !pagination || pagination.total_pages <= 1) return;
+
+    var table = tbody.closest('table');
+    var pager = document.getElementById(pagerId);
+    if (!table) return;
+    if (!pager) {
+      pager = document.createElement('nav');
+      pager.id = pagerId;
+      pager.className = 'table-pagination';
+      pager.setAttribute('aria-label', 'Paginación de reservas');
+      table.parentElement.insertAdjacentElement('afterend', pager);
+    }
+
+    var page = pagination.page;
+    var totalPages = pagination.total_pages;
+    var start = (page - 1) * pagination.limit + 1;
+    var end = Math.min(page * pagination.limit, pagination.total);
+    pager.hidden = false;
+    pager.innerHTML = '<span class="table-pagination__summary">Mostrando ' + start + '–' + end + ' de ' + pagination.total + '</span>' +
+      '<div class="table-pagination__controls">' +
+        '<button type="button" class="table-pagination__button" data-page="prev"' + (page === 1 ? ' disabled' : '') + '>Anterior</button>' +
+        '<span class="table-pagination__current">Página ' + page + ' de ' + totalPages + '</span>' +
+        '<button type="button" class="table-pagination__button" data-page="next"' + (page === totalPages ? ' disabled' : '') + '>Siguiente</button>' +
+      '</div>';
+
+    pager.querySelectorAll('[data-page]').forEach(function(button) {
+      button.addEventListener('click', function() {
+        onPageChange(this.dataset.page === 'next' ? page + 1 : page - 1);
+      });
+    });
+  }
+
   function formatMoney(amount) {
     return '$' + Number(amount || 0).toLocaleString('es-CO');
   }
@@ -154,22 +252,31 @@
     if (statComp)  statComp.textContent = stats['Completada'] || 0;
   }
 
-  function loadReservas() {
+  var reservasPage = 1;
+
+  function loadReservas(requestedPage) {
+    clearTablePagination('reservasPager');
+    if (typeof requestedPage === 'number') reservasPage = requestedPage;
     var params = new URLSearchParams();
     var fechaEl = document.getElementById('filterFecha');
     var estadoEl = document.getElementById('filterEstado');
     var servicioEl = document.getElementById('filterServicio');
     var esteticistaEl = document.getElementById('filterEsteticista');
+    var clienteEl = document.getElementById('filterCliente');
 
     var fecha       = fechaEl ? fechaEl.value : '';
     var estado      = estadoEl ? estadoEl.value : '';
     var servicio    = servicioEl ? servicioEl.value : '';
     var esteticista = esteticistaEl ? esteticistaEl.value : '';
+    var cliente     = clienteEl ? clienteEl.value.trim() : '';
 
     if (fecha)       params.set('fecha', fecha);
     if (estado)      params.set('estado', estado);
     if (servicio)    params.set('servicio', servicio);
     if (esteticista) params.set('esteticista', esteticista);
+    if (cliente)     params.set('cliente', cliente);
+    params.set('page', reservasPage);
+    params.set('limit', '10');
 
     tbody.innerHTML = '<tr><td colspan="9" class="dashboard__empty">Cargando reservas...</td></tr>';
 
@@ -188,7 +295,7 @@
         }
 
         var hint = document.getElementById('reservasCount');
-        var total = (data.reservas || []).length;
+        var total = data.pagination ? data.pagination.total : (data.reservas || []).length;
         if (hint) {
           hint.textContent = total === 0
             ? 'Sin resultados para los filtros actuales'
@@ -277,6 +384,8 @@
           });
         });
 
+        renderServerPagination(tbody, 'reservasPager', data.pagination, loadReservas);
+
       })
       .catch(function(err) {
         tbody.innerHTML = '<tr><td colspan="9" class="dashboard__empty">Error de conexión al cargar reservas</td></tr>';
@@ -360,13 +469,21 @@
   var filterEstado = document.getElementById('filterEstado');
   var filterServicio = document.getElementById('filterServicio');
   var filterEsteticista = document.getElementById('filterEsteticista');
+  var filterCliente = document.getElementById('filterCliente');
   var btnResetFilters = document.getElementById('btnResetFilters');
+  var searchTimer;
 
-  if (filterFecha)       filterFecha.addEventListener('change', loadReservas);
-  if (filterEstado)      filterEstado.addEventListener('change', loadReservas);
-  if (filterServicio)    filterServicio.addEventListener('change', loadReservas);
+  if (filterFecha)       filterFecha.addEventListener('change', function() { loadReservas(1); });
+  if (filterEstado)      filterEstado.addEventListener('change', function() { loadReservas(1); });
+  if (filterServicio)    filterServicio.addEventListener('change', function() { loadReservas(1); });
   if (filterEsteticista && filterEsteticista.tagName === 'SELECT') {
-    filterEsteticista.addEventListener('change', loadReservas);
+    filterEsteticista.addEventListener('change', function() { loadReservas(1); });
+  }
+  if (filterCliente) {
+    filterCliente.addEventListener('input', function() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(function() { loadReservas(1); }, 250);
+    });
   }
 
   if (btnResetFilters) {
@@ -374,10 +491,11 @@
       if (filterFecha) filterFecha.value = '';
       if (filterEstado) filterEstado.value = '';
       if (filterServicio) filterServicio.value = '';
+      if (filterCliente) filterCliente.value = '';
       if (filterEsteticista && filterEsteticista.tagName === 'SELECT') {
         filterEsteticista.value = '';
       }
-      loadReservas();
+      loadReservas(1);
       showToast('Filtros restablecidos', 'info');
     });
   }
@@ -625,6 +743,7 @@
 
   function loadBloqueos() {
     if (!tablaBloqueosBody) return;
+    clearTablePagination('bloqueosPager');
     tablaBloqueosBody.innerHTML = '<tr><td colspan="5" class="dashboard__empty">Cargando bloqueos...</td></tr>';
 
     fetch('api/appointments/blocks.php')
@@ -658,6 +777,7 @@
             }
           });
         });
+        paginateTable(tablaBloqueosBody, 'bloqueosPager');
       })
       .catch(function() {
         tablaBloqueosBody.innerHTML = '<tr><td colspan="5" class="dashboard__empty">Error al cargar bloqueos</td></tr>';
@@ -873,6 +993,7 @@
             '<td><span class="status-badge status-badge--confirmada">' + escHtml(r.nombre_estado) + '</span></td>' +
           '</tr>';
         }).join('');
+        paginateTable(contCitasBody, 'contingenciaPager');
       });
   }
 
@@ -1005,6 +1126,7 @@
 
   function loadServiciosCrud() {
     if (!tablaServiciosBody) return;
+    clearTablePagination('serviciosPager');
     tablaServiciosBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando catálogo...</td></tr>';
 
     fetch('api/admin/services.php')
@@ -1061,6 +1183,7 @@
             });
           });
         });
+        paginateTable(tablaServiciosBody, 'serviciosPager');
       });
   }
 
@@ -1124,6 +1247,7 @@
 
   function loadPersonalCrud() {
     if (!tablaPersonalBody) return;
+    clearTablePagination('personalPager');
     tablaPersonalBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando empleados...</td></tr>';
 
     fetch('api/admin/employees.php')
@@ -1185,6 +1309,7 @@
             });
           });
         });
+        paginateTable(tablaPersonalBody, 'personalPager');
       });
   }
 
@@ -1252,6 +1377,7 @@
 
   function loadAuditLogs() {
     if (!tablaLogsBody) return;
+    clearTablePagination('logsPager');
     tablaLogsBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando registros...</td></tr>';
 
     fetch('api/admin/logs.php')
@@ -1275,6 +1401,7 @@
             '<td><span class="status-badge" style="background:#eee;color:#444;">' + escHtml(l.tabla_afectada) + '</span></td>' +
           '</tr>';
         }).join('');
+        paginateTable(tablaLogsBody, 'logsPager');
       })
       .catch(function() {
         tablaLogsBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Error al cargar logs</td></tr>';
@@ -1295,6 +1422,7 @@
 
   function loadCorreos() {
     if (!tablaCorreosBody) return;
+    clearTablePagination('correosPager');
     tablaCorreosBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando correos...</td></tr>';
 
     fetch('api/admin/emails.php')
@@ -1352,6 +1480,7 @@
               });
           });
         });
+        paginateTable(tablaCorreosBody, 'correosPager');
       })
       .catch(function() {
         tablaCorreosBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Error de conexión</td></tr>';
@@ -1433,6 +1562,7 @@
     // Tabla de Citas del Período
     var tablaCitasBody = document.getElementById('tablaReporteCitasBody');
     if (tablaCitasBody) {
+      clearTablePagination('reportePager');
       if (!data.citas || data.citas.length === 0) {
         tablaCitasBody.innerHTML = '<tr><td colspan="7" class="dashboard__empty">No se encontraron citas en este período</td></tr>';
       } else {
@@ -1448,6 +1578,7 @@
             '<td><span class="status-badge status-badge--' + cls + '">' + escHtml(c.nombre_estado) + '</span></td>' +
           '</tr>';
         }).join('');
+        paginateTable(tablaCitasBody, 'reportePager');
       }
     }
   }
