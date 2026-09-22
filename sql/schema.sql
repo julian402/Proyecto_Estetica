@@ -73,6 +73,7 @@ CREATE TABLE servicios (
   duracion_minutos  INT NOT NULL,
   precio            DECIMAL(10,2) NOT NULL,
   activo            BOOLEAN NOT NULL DEFAULT TRUE,
+  imagen_url        VARCHAR(255) NULL DEFAULT NULL,
   CONSTRAINT fk_servicios_subcategoria
     FOREIGN KEY (id_subcategoria) REFERENCES subcategorias(id_subcategoria)
     ON UPDATE CASCADE ON DELETE CASCADE,
@@ -236,6 +237,13 @@ INSERT INTO servicios (id_subcategoria, nombre_servicio, descripcion, duracion_m
   (1, 'Glass Skin Facial', 'Hidratacion en capas y masaje drenante para una piel translucida y con luz desde adentro.', 75, 180000),
   (2, 'Limpieza Profunda K-Derm', 'Doble limpieza, extraccion suave y ampolla calmante para renovar la piel sin irritar.', 60, 140000),
   (3, 'Masaje Relajante Hanul', 'Tecnica de liberacion miofascial con aceites tibios para aliviar tension acumulada.', 60, 150000);
+
+INSERT INTO servicios (id_subcategoria, nombre_servicio, descripcion, duracion_minutos, precio, imagen_url) VALUES
+  (1, 'Lifting Coreano K-Glow', 'Masaje facial escultórico con técnicas de presión oriental y sueros tensores para definir el óvalo facial de forma natural.', 75, 190000, 'assets/images/services/lifting-k-glow.png'),
+  (2, 'Revitalizante de Arroz y Té Verde', 'Exfoliación enzimática suave con extractos botánicos y mascarilla de arroz iluminadora para pieles opacas.', 60, 130000, 'assets/images/services/revitalizante-arroz-te-verde.png'),
+  (2, 'Calmante Cica-Barrier', 'Ritual especializado con centella asiática y compresas frías para calmar rojeces, irritaciones y restaurar la barrera cutánea.', 60, 120000, 'assets/images/services/calmante-cica-barrier.png'),
+  (1, 'Tratamiento Ojos de Porcelana', 'Cuidado específico para el contorno de ojos que combina drenaje linfático con rodillos de jade fríos y parches de péptidos.', 60, 95000, 'assets/images/services/ojos-porcelana.png'),
+  (3, 'Exfoliación Corporal Hanul Velvet', 'Renovación corporal completa con sales marinas finas y aceites esenciales nutritivos para una piel ultrasuave.', 60, 140000, 'assets/images/services/exfoliacion-hanul-velvet.png');
 
 -- Usuarios iniciales con contrasenas hasheadas con bcrypt
 -- Admin Principal: Admin123

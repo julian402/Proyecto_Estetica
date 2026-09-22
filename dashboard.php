@@ -587,6 +587,11 @@ function strftime_es(): string {
                   <input type="text" class="form-input" id="crudServDesc" placeholder="Breve descripción del procedimiento">
                 </div>
               </div>
+              <div class="form-group" style="margin-top: 10px;">
+                <label class="form-label" for="crudServImagen">Imagen del tratamiento (opcional)</label>
+                <input type="file" class="form-input" id="crudServImagen" accept="image/jpeg,image/png,image/webp">
+                <p class="form-hint">JPG, PNG o WebP de máximo 5 MB. Si no cargas una imagen se conserva la actual o la predeterminada.</p>
+              </div>
 
               <div style="display: flex; gap: 10px; margin-top: 12px;">
                 <button type="submit" class="btn btn--primary btn--sm" id="btnSaveServicio">Guardar Tratamiento</button>

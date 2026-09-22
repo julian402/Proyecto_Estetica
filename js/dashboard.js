@@ -1124,21 +1124,21 @@
     formServicioCrud.addEventListener('submit', function(e) {
       e.preventDefault();
       var id = crudServicioId.value ? parseInt(crudServicioId.value, 10) : 0;
-      var payload = {
-        action: id ? 'update' : 'create',
-        id_servicio: id || undefined,
-        nombre: document.getElementById('crudServNombre').value.trim(),
-        precio: parseFloat(document.getElementById('crudServPrecio').value),
-        duracion_minutos: parseInt(document.getElementById('crudServDuracion').value, 10),
-        subcategoria_id: parseInt(document.getElementById('crudServSubcat').value, 10),
-        descripcion: document.getElementById('crudServDesc').value.trim(),
-        csrf_token: csrfToken
-      };
+      var payload = new FormData();
+      payload.append('action', id ? 'update' : 'create');
+      if (id) payload.append('id_servicio', id);
+      payload.append('nombre', document.getElementById('crudServNombre').value.trim());
+      payload.append('precio', document.getElementById('crudServPrecio').value);
+      payload.append('duracion_minutos', document.getElementById('crudServDuracion').value);
+      payload.append('subcategoria_id', document.getElementById('crudServSubcat').value);
+      payload.append('descripcion', document.getElementById('crudServDesc').value.trim());
+      payload.append('csrf_token', csrfToken);
+      var imageInput = document.getElementById('crudServImagen');
+      if (imageInput && imageInput.files[0]) payload.append('imagen', imageInput.files[0]);
 
       fetch('api/admin/services.php', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+          body: payload
       })
       .then(function(r) { return r.json(); })
       .then(function(res) {

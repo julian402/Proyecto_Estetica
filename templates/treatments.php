@@ -32,12 +32,17 @@
           'Glass Skin Facial' => 'assets/images/glass-skin.jpg',
           'Limpieza Profunda K-Derm' => 'assets/images/limpieza-profunda.jpg',
           'Masaje Relajante Hanul' => 'assets/images/masaje-relajante.jpg',
+          'Lifting Coreano K-Glow' => 'assets/images/services/lifting-k-glow.png',
+          'Revitalizante de Arroz y Té Verde' => 'assets/images/services/revitalizante-arroz-te-verde.png',
+          'Calmante Cica-Barrier' => 'assets/images/services/calmante-cica-barrier.png',
+          'Tratamiento Ojos de Porcelana' => 'assets/images/services/ojos-porcelana.png',
+          'Exfoliación Corporal Hanul Velvet' => 'assets/images/services/exfoliacion-hanul-velvet.png',
         ];
         $favoritoIds = $favoritoIds ?? [];
         foreach ($treatments as $index => $t):
           $catLower = strtolower($t['nombre_categoria']);
           $filterCat = $catLower === 'facial' ? 'faciales' : 'corporales';
-          $imagePath = $treatmentImages[$t['nombre_servicio']] ?? 'assets/images/glass-skin.jpg';
+          $imagePath = $t['imagen_url'] ?: ($treatmentImages[$t['nombre_servicio']] ?? 'assets/images/glass-skin.jpg');
         ?>
         <article class="treatment-card" data-category="<?php echo $filterCat; ?>">
           <div class="treatment-card__image">

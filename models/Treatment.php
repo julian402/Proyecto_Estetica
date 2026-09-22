@@ -9,7 +9,7 @@ class Treatment {
         $db = getDB();
         $stmt = $db->query(
             'SELECT s.id_servicio, s.nombre_servicio, s.descripcion,
-                    s.duracion_minutos, s.precio, s.activo,
+                    s.duracion_minutos, s.precio, s.activo, s.imagen_url,
                     c.nombre_categoria, sub.nombre_subcategoria, s.id_subcategoria
              FROM servicios s
              JOIN subcategorias sub ON s.id_subcategoria = sub.id_subcategoria
@@ -27,7 +27,7 @@ class Treatment {
         $db = getDB();
         $stmt = $db->query(
             'SELECT s.id_servicio, s.nombre_servicio, s.descripcion,
-                    s.duracion_minutos, s.precio, s.activo,
+                    s.duracion_minutos, s.precio, s.activo, s.imagen_url,
                     c.id_categoria, c.nombre_categoria,
                     sub.id_subcategoria, sub.nombre_subcategoria
              FROM servicios s
@@ -45,7 +45,7 @@ class Treatment {
         $db = getDB();
         $stmt = $db->prepare(
             'SELECT s.id_servicio, s.nombre_servicio, s.descripcion,
-                    s.duracion_minutos, s.precio, s.activo,
+                    s.duracion_minutos, s.precio, s.activo, s.imagen_url,
                     c.nombre_categoria, sub.nombre_subcategoria, s.id_subcategoria
              FROM servicios s
              JOIN subcategorias sub ON s.id_subcategoria = sub.id_subcategoria
@@ -64,7 +64,7 @@ class Treatment {
         $db = getDB();
         $stmt = $db->prepare(
             'SELECT s.id_servicio, s.id_subcategoria, s.nombre_servicio, s.descripcion,
-                    s.duracion_minutos, s.precio, s.activo,
+                    s.duracion_minutos, s.precio, s.activo, s.imagen_url,
                     c.id_categoria, c.nombre_categoria, sub.nombre_subcategoria
              FROM servicios s
              JOIN subcategorias sub ON s.id_subcategoria = sub.id_subcategoria
@@ -80,7 +80,7 @@ class Treatment {
     /**
      * Crea un nuevo servicio.
      */
-    public static function create(int $subcatId, string $nombre, ?string $descripcion, int $duracion, float $precio, bool $activo = true): int {
+    public static function create(int $subcatId, string $nombre, ?string $descripcion, int $duracion, float $precio, bool $activo = true, ?string $imagenUrl = null): int {
         if ($duracion <= 0) {
             throw new \InvalidArgumentException('La duracion debe ser mayor a 0 minutos.');
         }
@@ -90,8 +90,8 @@ class Treatment {
 
         $db = getDB();
         $stmt = $db->prepare(
-            'INSERT INTO servicios (id_subcategoria, nombre_servicio, descripcion, duracion_minutos, precio, activo)
-             VALUES (:subcat, :nombre, :descripcion, :duracion, :precio, :activo)'
+            'INSERT INTO servicios (id_subcategoria, nombre_servicio, descripcion, duracion_minutos, precio, activo, imagen_url)
+             VALUES (:subcat, :nombre, :descripcion, :duracion, :precio, :activo, :imagen_url)'
         );
         $stmt->execute([
             'subcat'      => $subcatId,
@@ -100,6 +100,7 @@ class Treatment {
             'duracion'    => $duracion,
             'precio'      => $precio,
             'activo'      => $activo ? 1 : 0,
+            'imagen_url'  => $imagenUrl,
         ]);
         return (int) $db->lastInsertId();
     }
@@ -107,7 +108,7 @@ class Treatment {
     /**
      * Actualiza un servicio existente.
      */
-    public static function update(int $id, int $subcatId, string $nombre, ?string $descripcion, int $duracion, float $precio, ?bool $activo = null): bool {
+    public static function update(int $id, int $subcatId, string $nombre, ?string $descripcion, int $duracion, float $precio, ?bool $activo = null, ?string $imagenUrl = null): bool {
         if ($duracion <= 0) {
             throw new \InvalidArgumentException('La duracion debe ser mayor a 0 minutos.');
         }
@@ -136,6 +137,10 @@ class Treatment {
         if ($activo !== null) {
             $fields[] = 'activo = :activo';
             $params['activo'] = $activo ? 1 : 0;
+        }
+        if ($imagenUrl !== null) {
+            $fields[] = 'imagen_url = :imagen_url';
+            $params['imagen_url'] = $imagenUrl;
         }
 
         $sql = 'UPDATE servicios SET ' . implode(', ', $fields) . ' WHERE id_servicio = :id';

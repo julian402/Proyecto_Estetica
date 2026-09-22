@@ -9,6 +9,28 @@ start_session();
 $user = require_role([2, 3]);
 $userId = (int) $user['id_usuario'];
 
+function service_image_upload(): ?string {
+    if (empty($_FILES['imagen']) || $_FILES['imagen']['error'] === UPLOAD_ERR_NO_FILE) return null;
+    $file = $_FILES['imagen'];
+    if ($file['error'] !== UPLOAD_ERR_OK || $file['size'] > 5 * 1024 * 1024) {
+        throw new RuntimeException('La imagen no pudo cargarse o supera 5 MB.');
+    }
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+    $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    if (!isset($extensions[$mime]) || !@getimagesize($file['tmp_name'])) {
+        throw new RuntimeException('Selecciona una imagen JPG, PNG o WebP válida.');
+    }
+    $dir = __DIR__ . '/../../assets/images/services';
+    if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
+        throw new RuntimeException('No se pudo preparar la carpeta de imágenes.');
+    }
+    $name = bin2hex(random_bytes(16)) . '.' . $extensions[$mime];
+    if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $name)) {
+        throw new RuntimeException('No se pudo guardar la imagen.');
+    }
+    return 'assets/images/services/' . $name;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $action = $_GET['action'] ?? 'list';
 
@@ -31,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $input = json_input();
+    $input = $_POST ?: json_input();
     $token = $input['csrf_token'] ?? '';
 
     if (!verify_csrf($token)) {
@@ -53,7 +75,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            $newId = Treatment::create($subcatId, $nombre, $desc, $duracion, $precio, $activo);
+            $imageUrl = service_image_upload();
+            $newId = Treatment::create($subcatId, $nombre, $desc, $duracion, $precio, $activo, $imageUrl);
             log_audit($userId, 'CREATE_SERVICE', 'servicios', $newId, "Servicio creado: '{$nombre}'");
             json_response([
                 'success' => true,
@@ -80,7 +103,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            $updated = Treatment::update($id, $subcatId, $nombre, $desc, $duracion, $precio, $activo);
+            $imageUrl = service_image_upload();
+            $updated = Treatment::update($id, $subcatId, $nombre, $desc, $duracion, $precio, $activo, $imageUrl);
             log_audit($userId, 'UPDATE_SERVICE', 'servicios', $id, "Servicio actualizado: '{$nombre}'");
             json_response([
                 'success' => true,
