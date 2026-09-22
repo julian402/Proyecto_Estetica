@@ -772,9 +772,12 @@
         tablaBloqueosBody.querySelectorAll('.btn-delete-block').forEach(function(btn) {
           btn.addEventListener('click', function() {
             var bId = parseInt(this.dataset.id, 10);
-            if (confirm('¿Deseas desbloquear este horario?')) {
-              deleteBlock(bId);
-            }
+            window.confirmAction({
+              title: 'Quitar bloqueo',
+              message: '¿Deseas desbloquear este horario? Volverá a estar disponible para agendar.',
+              confirmLabel: 'Sí, quitar bloqueo',
+              onConfirm: function() { deleteBlock(bId); }
+            });
           });
         });
         paginateTable(tablaBloqueosBody, 'bloqueosPager');
@@ -1068,7 +1071,11 @@
         showToast('Selecciona al menos una cita', 'warning');
         return;
       }
-      if (confirm('¿Confirmas cancelar ' + ids.length + ' citas por contingencia?')) {
+      window.confirmAction({
+        title: 'Cancelar citas',
+        message: '¿Confirmas cancelar ' + ids.length + ' citas por contingencia? Esta acción notificará a los clientes.',
+        confirmLabel: 'Sí, cancelar citas',
+        onConfirm: function() {
         fetch('api/admin/contingency.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1083,7 +1090,8 @@
             showToast(res.error || 'Error al cancelar', 'error');
           }
         });
-      }
+        }
+      });
     });
   }
 
@@ -1093,7 +1101,11 @@
       var fecha = document.getElementById('contFecha').value;
       if (!estId || !fecha) return;
 
-      if (confirm('¿Deseas bloquear todo el día para este esteticista?')) {
+      window.confirmAction({
+        title: 'Bloquear día completo',
+        message: '¿Deseas bloquear todo el día para este especialista?',
+        confirmLabel: 'Sí, bloquear día',
+        onConfirm: function() {
         fetch('api/admin/contingency.php', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1114,7 +1126,8 @@
             showToast(res.error || 'Error al bloquear día', 'error');
           }
         });
-      }
+        }
+      });
     });
   }
   var btnOpenServicios    = document.getElementById('btnOpenServicios');

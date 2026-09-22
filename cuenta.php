@@ -225,11 +225,13 @@ function cuenta_icon(string $name): string {
     </div>
   </div>
 <?php require __DIR__ . '/templates/modal-reschedule.php'; ?>
+<?php require __DIR__ . '/templates/modal-confirm.php'; ?>
 <div class="toast-container" id="toastContainer"></div>
 
   <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
 
   <script src="js/panel.js?v=<?php echo filemtime(__DIR__ . '/js/panel.js'); ?>"></script>
+  <script src="js/confirm-modal.js?v=<?php echo filemtime(__DIR__ . '/js/confirm-modal.js'); ?>"></script>
   <script src="js/app.js?v=<?php echo filemtime(__DIR__ . '/js/app.js'); ?>"></script>
 </body>
 </html>

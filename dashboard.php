@@ -876,11 +876,13 @@ function strftime_es(): string {
   </div>
 
 <div class="toast-container" id="toastContainer"></div>
+<?php require __DIR__ . '/templates/modal-confirm.php'; ?>
 <input type="hidden" id="dashCsrf" value="<?php echo csrf_token(); ?>">
   <input type="hidden" id="currentUserRole" value="<?php echo $userRole; ?>">
   <input type="hidden" id="currentUserId" value="<?php echo (int)$currentUser['id_usuario']; ?>">
 
   <script src="js/panel.js?v=<?php echo filemtime(__DIR__ . '/js/panel.js'); ?>"></script>
+  <script src="js/confirm-modal.js?v=<?php echo filemtime(__DIR__ . '/js/confirm-modal.js'); ?>"></script>
   <script src="js/dashboard.js?v=<?php echo filemtime(__DIR__ . '/js/dashboard.js'); ?>"></script>
 </body>
 </html>

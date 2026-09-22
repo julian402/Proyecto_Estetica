@@ -1273,9 +1273,12 @@
           container.querySelectorAll('[data-cancel-cita]').forEach(function(b) {
             b.addEventListener('click', function() {
               var id = parseInt(b.getAttribute('data-cancel-cita'));
-              if (confirm('¿Estás seguro de que deseas cancelar esta cita? Esta acción liberará el espacio reservado.')) {
-                cancelCita(id);
-              }
+              window.confirmAction({
+                title: 'Cancelar cita',
+                message: '¿Deseas cancelar esta cita? El horario quedará disponible nuevamente.',
+                confirmLabel: 'Sí, cancelar cita',
+                onConfirm: function() { cancelCita(id); }
+              });
             });
           });
 
