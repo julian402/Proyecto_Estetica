@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Creación de bloqueo
-    $esteticId = !empty($input['id_esteticista']) ? (int)$input['id_esteticista'] : 0;
+    $esteticId = !empty($input['id_esteticista']) ? (int)$input['id_esteticista'] : (int)($input['esteticista_id'] ?? 0);
     if ($rol === 4) {
         $esteticId = (int)$user['id_usuario'];
     }
@@ -106,6 +106,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $inicioStr = $dtInicio->format('Y-m-d H:i:s');
     $finStr    = $dtFin->format('Y-m-d H:i:s');
 
+    // No tiene sentido bloquear un horario que ya paso
+    if ($dtFin <= new DateTime('now')) {
+        json_response(['error' => 'No puedes bloquear un horario que ya pasó'], 422);
+    }
+
+    // El especialista debe existir y estar activo
+    require_once __DIR__ . '/../../models/User.php';
+    $especialista = User::findById($esteticId);
+    if (!$especialista || (int) $especialista['id_rol'] !== 4) {
+        json_response(['error' => 'El especialista seleccionado no es válido'], 422);
+    }
+    if (empty($especialista['estado_cuenta'])) {
+        json_response(['error' => 'El especialista está inactivo'], 422);
+    }
+
+    // Evitar bloqueos solapados: confunden la agenda y no aportan nada
+    $stmtSolape = $db->prepare(
+        'SELECT id_bloqueo, fecha_hora_inicio, fecha_hora_fin, motivo
+         FROM ausencias_bloqueos
+         WHERE id_esteticista = :est
+           AND :inicio < fecha_hora_fin
+           AND :fin > fecha_hora_inicio
+         LIMIT 1'
+    );
+    $stmtSolape->execute(['est' => $esteticId, 'inicio' => $inicioStr, 'fin' => $finStr]);
+    $solape = $stmtSolape->fetch();
+
+    if ($solape) {
+        $desde = substr($solape['fecha_hora_inicio'], 11, 5);
+        $hasta = substr($solape['fecha_hora_fin'], 11, 5);
+        json_response([
+            'error' => "Ya existe un bloqueo de {$desde} a {$hasta} para este especialista",
+        ], 409);
+    }
+
     try {
         $stmtIns = $db->prepare(
             'INSERT INTO ausencias_bloqueos (id_esteticista, fecha_hora_inicio, fecha_hora_fin, motivo)
@@ -125,10 +160,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'id_bloqueo' => $newId
         ]);
     } catch (\PDOException $e) {
+        // El trigger impide bloquear sobre una cita activa. Su mensaje viene
+        // envuelto en jerga de SQL ('SQLSTATE[45000]: ... 1644 ...'), asi que
+        // se extrae solo la parte legible.
         if ($e->getCode() === '45000') {
-            json_response(['error' => $e->getMessage()], 409);
+            // Formato del driver: 'SQLSTATE[45000]: <<Unknown error>>: 1644 <mensaje>'
+            $limpio = preg_replace('/^SQLSTATE\[\d+\]:.*?:\s*\d+\s+/s', '', $e->getMessage());
+            json_response(['error' => trim($limpio) ?: 'No se puede bloquear: el especialista tiene citas en ese horario'], 409);
         }
-        json_response(['error' => 'Error al registrar el bloqueo: ' . $e->getMessage()], 500);
+        error_log('Error registrando bloqueo: ' . $e->getMessage());
+        json_response(['error' => 'No se pudo registrar el bloqueo'], 500);
     }
 }
 

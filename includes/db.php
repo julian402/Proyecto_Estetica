@@ -9,6 +9,15 @@ if (!file_exists($configFile)) {
 
 require_once $configFile;
 
+// Zona horaria de la aplicacion.
+// Sin esto PHP usa la de php.ini (en XAMPP suele ser UTC o la del sistema del
+// servidor) y deja de coincidir con la hora real del estudio: los horarios de hoy
+// se comparan contra otra hora y se descartan como si ya hubieran pasado.
+if (!defined('APP_TIMEZONE')) {
+    define('APP_TIMEZONE', 'America/Bogota');
+}
+date_default_timezone_set(APP_TIMEZONE);
+
 function getDB(): PDO {
     static $pdo = null;
 
@@ -22,6 +31,15 @@ function getDB(): PDO {
 
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+
+            // MySQL usa su propia zona horaria para NOW() y para los triggers.
+            // Se alinea con la de la aplicacion para que ambas coincidan.
+            try {
+                $offset = (new DateTime('now', new DateTimeZone(APP_TIMEZONE)))->format('P');
+                $pdo->exec("SET time_zone = '{$offset}'");
+            } catch (\Throwable $e) {
+                error_log('No se pudo fijar la zona horaria de MySQL: ' . $e->getMessage());
+            }
         } catch (PDOException $e) {
             // Si la DB no existe, redirigir al setup
             if (strpos($e->getMessage(), 'Unknown database') !== false

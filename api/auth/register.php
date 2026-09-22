@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../../includes/audit.php';
+require_once __DIR__ . '/../../includes/mailer.php';
 require_once __DIR__ . '/../../models/User.php';
 
 start_session();
@@ -83,6 +84,13 @@ $userId = User::create($name, $email, $password, $phone);
 // Iniciar sesion automaticamente
 login_session($userId);
 log_audit($userId, 'REGISTER', 'usuarios', $userId, 'Nuevo registro de cliente');
+
+// Correo de bienvenida (nunca debe romper el registro)
+try {
+    send_welcome_email($name, $email);
+} catch (Throwable $e) {
+    error_log('Error despachando correo de bienvenida: ' . $e->getMessage());
+}
 
 json_response([
     'success' => true,

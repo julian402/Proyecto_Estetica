@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 }
 
 $date       = $_GET['date'] ?? '';
-$servicioId = (int) ($_GET['servicio_id'] ?? 0);
+$servicioId = (int) ($_GET['servicio_id'] ?? $_GET['service_id'] ?? 0);
 $esteticId  = (int) ($_GET['esteticista_id'] ?? 0);
 
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $servicioId <= 0) {
@@ -18,7 +18,7 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $servicioId <= 0) {
 }
 
 if ($date < date('Y-m-d')) {
-    json_response(['success' => true, 'slots' => []]);
+    json_response(['success' => true, 'slots' => [], 'available_slots' => []]);
 }
 
 $servicio = Treatment::findById($servicioId);
@@ -36,4 +36,4 @@ if ($date === date('Y-m-d')) {
     }));
 }
 
-json_response(['success' => true, 'slots' => $slots]);
+json_response(['success' => true, 'slots' => $slots, 'available_slots' => $slots]);

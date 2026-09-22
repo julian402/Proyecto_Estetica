@@ -30,8 +30,8 @@ if (!verify_csrf($token)) {
 }
 
 $reservaId = (int) ($input['reserva_id'] ?? 0);
-$dateRaw   = $input['date'] ?? '';
-$timeRaw   = $input['time'] ?? '';
+$dateRaw   = $input['date'] ?? $input['nueva_fecha'] ?? '';
+$timeRaw   = $input['time'] ?? $input['nueva_hora'] ?? '';
 $motivo    = trim($input['motivo'] ?? 'Reprogramacion solicitada');
 
 if ($reservaId <= 0 || !is_string($dateRaw) || !is_string($timeRaw)) {
@@ -60,7 +60,8 @@ if (in_array((int) $reserva['id_estado'], [3, 4], true)) {
     json_response(['error' => 'No se puede reprogramar una cita cancelada o completada'], 422);
 }
 
-$newEsteticId = !empty($input['esteticista_id']) ? (int) $input['esteticista_id'] : (int) $reserva['id_esteticista'];
+$esteticInput = $input['esteticista_id'] ?? $input['id_esteticista'] ?? null;
+$newEsteticId = !empty($esteticInput) ? (int) $esteticInput : (int) $reserva['id_esteticista'];
 
 // Validar nuevo esteticista
 $est = User::findById($newEsteticId);

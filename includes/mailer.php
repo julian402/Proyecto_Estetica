@@ -1,33 +1,48 @@
 <?php
 require_once __DIR__ . '/db.php';
 
+// Configuracion de correo opcional: si no existe config/mail.php el sistema
+// funciona en modo 'log' (registra sin enviar), que es lo util en XAMPP.
+if (file_exists(__DIR__ . '/../config/mail.php')) {
+    require_once __DIR__ . '/../config/mail.php';
+}
+require_once __DIR__ . '/smtp.php';
+
+if (!defined('MAIL_ENABLED'))   define('MAIL_ENABLED', true);
+if (!defined('MAIL_TRANSPORT')) define('MAIL_TRANSPORT', 'log');
+if (!defined('MAIL_FROM'))      define('MAIL_FROM', 'no-reply@hanulbeauty.co');
+if (!defined('MAIL_FROM_NAME')) define('MAIL_FROM_NAME', 'Hanul Beauty');
+if (!defined('MAIL_REPLY_TO'))  define('MAIL_REPLY_TO', 'soporte@hanulbeauty.co');
+if (!defined('APP_BASE_URL'))   define('APP_BASE_URL', 'http://localhost/Proyecto_Estetica');
+
 /**
  * Servicio de correo transaccional para Hanul Beauty.
- * Registra cada correo en la base de datos (tabla correos_log) y en logs/emails.log
- * para total trazabilidad local en entornos como XAMPP.
+ *
+ * Cada correo se registra siempre en logs/emails.log y en la tabla correos_log,
+ * con el resultado REAL del envio. Segun MAIL_TRANSPORT:
+ *   'log'  -> solo registra (sin salir del servidor)
+ *   'smtp' -> ademas entrega por SMTP mediante includes/smtp.php
  */
 
 /**
- * Envia y registra un correo transaccional.
+ * Deja constancia del correo en el log de archivo y en la base de datos.
  */
-function send_email(string $to, string $subject, string $htmlBody): bool {
-    $estado = 'enviado';
-
+function log_email(string $to, string $subject, string $htmlBody, string $estado): void {
     // 1. Registro en archivo local logs/emails.log
     try {
         $logsDir = __DIR__ . '/../logs';
         if (!is_dir($logsDir)) {
             @mkdir($logsDir, 0777, true);
         }
-        $logFile = $logsDir . '/emails.log';
         $logEntry = sprintf(
-            "[%s] TO: %s | SUBJECT: %s\n----------------------------------------\n%s\n========================================\n\n",
+            "[%s] TO: %s | SUBJECT: %s | ESTADO: %s\n----------------------------------------\n%s\n========================================\n\n",
             date('Y-m-d H:i:s'),
             $to,
             $subject,
+            $estado,
             $htmlBody
         );
-        @file_put_contents($logFile, $logEntry, FILE_APPEND | LOCK_EX);
+        @file_put_contents($logsDir . '/emails.log', $logEntry, FILE_APPEND | LOCK_EX);
     } catch (\Throwable $e) {
         error_log('Error escribiendo en logs/emails.log: ' . $e->getMessage());
     }
@@ -43,20 +58,43 @@ function send_email(string $to, string $subject, string $htmlBody): bool {
             'destinatario' => $to,
             'asunto'       => $subject,
             'cuerpo_html'  => $htmlBody,
-            'estado'       => $estado,
+            'estado'       => mb_substr($estado, 0, 50),
         ]);
     } catch (\Throwable $e) {
         error_log('Error insertando en correos_log: ' . $e->getMessage());
     }
+}
 
-    // 3. Intento de envio con mail() nativo (suprimido para evitar warnings en XAMPP sin sendmail)
-    $headers  = "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $headers .= "From: Hanul Beauty <no-reply@hanulbeauty.co>\r\n";
-    $headers .= "Reply-To: soporte@hanulbeauty.co\r\n";
-    @mail($to, $subject, $htmlBody, $headers);
+/**
+ * Envia y registra un correo transaccional.
+ * Devuelve true solo si el correo quedo efectivamente entregado o registrado.
+ */
+function send_email(string $to, string $subject, string $htmlBody): bool {
+    if (!MAIL_ENABLED) {
+        return false;
+    }
 
-    return true;
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        log_email($to, $subject, $htmlBody, 'error: destinatario invalido');
+        return false;
+    }
+
+    // Modo 'log': no se intenta ninguna entrega
+    if (MAIL_TRANSPORT !== 'smtp') {
+        log_email($to, $subject, $htmlBody, 'registrado');
+        return true;
+    }
+
+    try {
+        smtp_send($to, $subject, $htmlBody);
+        log_email($to, $subject, $htmlBody, 'enviado');
+        return true;
+    } catch (\Throwable $e) {
+        $detalle = 'error: ' . $e->getMessage();
+        error_log('Fallo el envio SMTP a ' . $to . ' -> ' . $e->getMessage());
+        log_email($to, $subject, $htmlBody, $detalle);
+        return false;
+    }
 }
 
 /**
@@ -266,11 +304,12 @@ function send_appointment_confirmation(array $appointmentData, array $clientData
     $guestSection = '';
     if ($isGuest) {
         $encodedEmail = urlencode($clientEmail);
+        $baseUrl      = rtrim(APP_BASE_URL, "/");
         $guestSection = <<<HTML
         <div class="guest-banner">
           <h4>¿Primera vez en Hanul Beauty?</h4>
           <p>Tu cita ha sido agendada con éxito. Para consultar tus reservas, reprogramar fácilmente y acumular puntos, completa tu contraseña en un solo clic:</p>
-          <a href="http://localhost/Proyecto_Estetica/completar-perfil.php?email={$encodedEmail}" class="btn" style="padding: 10px 18px; font-size: 13px;">Completar mi perfil</a>
+          <a href="{$baseUrl}/index.php?completar=1&amp;email={$encodedEmail}" class="btn" style="padding: 10px 18px; font-size: 13px;">Completar mi perfil</a>
         </div>
 HTML;
     }
@@ -480,4 +519,43 @@ HTML;
     $html = render_hanul_email_template($subject, $content);
 
     return send_email($clientEmail, $subject, $html);
+}
+
+/**
+ * Envia el correo de bienvenida tras crear una cuenta de cliente.
+ */
+function send_welcome_email(string $name, string $email): bool {
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        return false;
+    }
+
+    $clientName = htmlspecialchars($name, ENT_QUOTES, 'UTF-8');
+    $baseUrl    = rtrim(APP_BASE_URL, '/');
+
+    $content = <<<HTML
+      <h2 class="email-title">Bienvenida a Hanul Beauty</h2>
+      <p>Hola {$clientName},</p>
+      <p>Tu cuenta ya está activa. Desde ahora puedes agendar tus rituales K-Beauty, consultar el estado de tus citas, reprogramarlas y guardar tus tratamientos favoritos.</p>
+
+      <div class="details-box">
+        <table class="details-table">
+          <tr>
+            <td class="details-label">Correo de acceso:</td>
+            <td class="details-value">{$email}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="text-align:center; margin-top: 24px;">
+        <a href="{$baseUrl}/index.php#agendar" class="btn" style="padding: 10px 18px; font-size: 13px;">Agendar mi primera cita</a>
+      </p>
+
+      <p style="margin-top: 24px;">Si no fuiste tú quien creó esta cuenta, escríbenos y la damos de baja de inmediato.</p>
+HTML;
+
+    return send_email(
+        $email,
+        'Bienvenida a Hanul Beauty',
+        render_hanul_email_template('Bienvenida a Hanul Beauty', $content)
+    );
 }

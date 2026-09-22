@@ -13,3 +13,8 @@ define('DB_NAME', 'kbeauty_db');
 define('DB_USER', 'root');
 define('DB_PASS', '');        // En XAMPP por defecto es vacio
 define('DB_CHARSET', 'utf8mb4');
+
+// Zona horaria del estudio.
+// PHP usa la de php.ini, que en XAMPP no suele coincidir con la del negocio.
+// Si no se fija aqui, la hora de PHP y la de MySQL se desalinean.
+define('APP_TIMEZONE', 'America/Bogota');

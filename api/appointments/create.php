@@ -19,11 +19,15 @@ if (!verify_csrf($token)) {
     json_response(['error' => 'Token de seguridad invalido. Recarga la pagina.'], 403);
 }
 
-// 1. Validar sesion si el usuario esta logueado
+// 1. Resolver quien es el cliente de la reserva
 $isGuest = true;
 $currentUser = current_user();
 
-if ($currentUser) {
+// El personal (SuperAdmin 2, Recepcion 3, Esteticista 4) agenda PARA un tercero:
+// los datos del formulario mandan, no los de la sesion.
+$isStaff = $currentUser && in_array((int) ($currentUser['id_rol'] ?? 0), [2, 3, 4], true);
+
+if ($currentUser && !$isStaff) {
     $clienteId = (int) $currentUser['id_usuario'];
     $nombre    = trim($input['nombre'] ?? $currentUser['nombre']);
     $correo    = strtolower(trim($input['correo'] ?? $currentUser['correo']));
@@ -110,7 +114,7 @@ $dateTime->modify('+' . (int) $servicio['duracion_minutos'] . ' minutes');
 $fechaFin = $dateTime->format('Y-m-d H:i:s');
 
 // 2. Gestion o creacion de usuario si no estaba autenticado
-if (!$currentUser) {
+if (!$currentUser || $isStaff) {
     try {
         $clienteId = User::findOrCreateGuest($nombre, $correo, $telefono);
     } catch (\Throwable $e) {

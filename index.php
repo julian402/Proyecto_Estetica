@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/models/Treatment.php';
 require_once __DIR__ . '/models/User.php';
+require_once __DIR__ . '/models/Favorite.php';
 
 start_session();
 
@@ -14,6 +15,10 @@ if ($currentUser && in_array((int) $currentUser['id_rol'], [2, 3, 4])) {
 // Datos para los templates
 $treatments   = Treatment::getAll();
 $esteticistas = User::getEsteticistas();
+
+// Favoritos del usuario: se pintan desde el servidor para que el corazon
+// aparezca marcado ya en el primer render, sin esperar a una peticion.
+$favoritoIds  = $currentUser ? Favorite::getUserFavoriteIds((int) $currentUser['id_usuario']) : [];
 
 // Incluir templates en orden
 require __DIR__ . '/templates/header.php';

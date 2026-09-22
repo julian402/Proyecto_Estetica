@@ -25,7 +25,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     $employees = User::getAllEmployees();
-    json_response(['success' => true, 'empleados' => $employees]);
+    $rolesStmt = getDB()->query('SELECT id_rol, nombre_rol FROM roles WHERE id_rol IN (2, 3, 4) ORDER BY id_rol');
+    $roles = $rolesStmt->fetchAll();
+
+    json_response([
+        'success'   => true,
+        'empleados' => $employees,
+        'staff'     => $employees,
+        'roles'     => $roles,
+    ]);
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -121,6 +129,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (\Throwable $e) {
             error_log('Error actualizando empleado: ' . $e->getMessage());
             json_response(['error' => 'No se pudo actualizar el empleado'], 500);
+        }
+    }
+
+    if ($action === 'toggle') {
+        $id = (int) ($input['id_usuario'] ?? $input['id'] ?? 0);
+
+        if ($id <= 0) {
+            json_response(['error' => 'ID de empleado invalido'], 422);
+        }
+
+        if ($id === $userId) {
+            json_response(['error' => 'No puedes desactivar tu propia cuenta'], 422);
+        }
+
+        $empleado = User::findById($id);
+        if (!$empleado || !in_array((int) $empleado['id_rol'], [2, 3, 4], true)) {
+            json_response(['error' => 'Empleado no encontrado'], 404);
+        }
+
+        $nuevoEstado = ((int) $empleado['estado_cuenta'] === 1) ? 0 : 1;
+
+        try {
+            User::updateEmployee(
+                $id,
+                $empleado['nombre'],
+                $empleado['correo'],
+                (int) $empleado['id_rol'],
+                !empty($empleado['telefono']) ? $empleado['telefono'] : null,
+                null,
+                $nuevoEstado
+            );
+            log_audit($userId, 'TOGGLE_EMPLOYEE', 'usuarios', $id, ($nuevoEstado ? 'Empleado activado' : 'Empleado desactivado') . ", id: {$id}");
+            json_response([
+                'success' => true,
+                'message' => $nuevoEstado ? 'Empleado activado correctamente' : 'Empleado desactivado correctamente',
+            ]);
+        } catch (\RuntimeException $e) {
+            json_response(['error' => $e->getMessage()], 409);
+        } catch (\Throwable $e) {
+            error_log('Error cambiando estado de empleado: ' . $e->getMessage());
+            json_response(['error' => 'No se pudo cambiar el estado del empleado'], 500);
         }
     }
 

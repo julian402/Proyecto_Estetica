@@ -1,5 +1,6 @@
 # Credenciales reales (nunca subir)
 config/database.php
+config/mail.php
 config/installed.lock
 
 # Sistema operativo

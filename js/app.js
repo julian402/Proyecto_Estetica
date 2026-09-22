@@ -286,7 +286,260 @@
             card.style.display = card.getAttribute('data-category') === filter ? '' : 'none';
           }
         });
+
+        // Recalcular las paginas del carrusel con las tarjetas visibles
+        if (typeof window.refreshTreatmentsCarousel === 'function') {
+          window.refreshTreatmentsCarousel();
+        }
       });
+    });
+  })();
+
+  // ---- Carrusel de tratamientos ----
+  // Avanza de pagina en pagina (3 tarjetas en escritorio, 2 en tablet, 1 en movil).
+  // Usa scroll nativo con scroll-snap, asi el gesto tactil funciona sin codigo extra.
+  (function() {
+    var track = document.getElementById('treatmentsTrack');
+    var prev  = document.getElementById('treatPrev');
+    var next  = document.getElementById('treatNext');
+    var dots  = document.getElementById('treatmentsDots');
+    var nav   = document.getElementById('treatmentsNav');
+    if (!track) return;
+
+    // Pagina a la que se esta yendo. Se guarda aparte porque leer scrollLeft
+    // a mitad de la animacion suave devuelve una pagina intermedia y el
+    // segundo clic seguido no avanzaba.
+    var targetPage = 0;
+
+    function visibleCards() {
+      return Array.prototype.filter.call(track.children, function(card) {
+        return card.offsetParent !== null;
+      });
+    }
+
+    function perPage() {
+      var cards = visibleCards();
+      if (!cards.length) return 1;
+      var cardW = cards[0].getBoundingClientRect().width;
+      if (!cardW) return 1;
+      var styles = getComputedStyle(track);
+      var gap = parseFloat(styles.columnGap || styles.gap) || 0;
+      return Math.max(1, Math.round((track.clientWidth + gap) / (cardW + gap)));
+    }
+
+    function pageCount() {
+      return Math.max(1, Math.ceil(visibleCards().length / perPage()));
+    }
+
+    function currentPage() {
+      var cards = visibleCards();
+      var pp = perPage();
+      for (var i = 0; i < cards.length; i++) {
+        if (cards[i].offsetLeft >= track.scrollLeft - 4) {
+          return Math.min(pageCount() - 1, Math.floor(i / pp));
+        }
+      }
+      return pageCount() - 1;
+    }
+
+
+    // Desplazamiento a una pagina.
+    //
+    // La correccion no depende de la animacion: se pide el scroll suave y,
+    // si el navegador no lo ejecuta (pestana en segundo plano, motores que
+    // lo ignoran), se fija la posicion directamente. Asi el carrusel siempre
+    // acaba en la pagina correcta, con animacion o sin ella.
+    var comprobacion = null;
+
+    function irAPosicion(destino) {
+      clearTimeout(comprobacion);
+
+      var reduceMovimiento = window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (reduceMovimiento || typeof track.scrollTo !== 'function') {
+        track.scrollLeft = destino;
+        return;
+      }
+
+      try {
+        track.scrollTo({ left: destino, behavior: 'smooth' });
+      } catch (err) {
+        track.scrollLeft = destino;
+        return;
+      }
+
+      comprobacion = setTimeout(function () {
+        if (Math.abs(track.scrollLeft - destino) > 2) {
+          track.scrollLeft = destino;
+        }
+        syncUI();
+      }, 450);
+    }
+
+    function goToPage(page) {
+      var cards = visibleCards();
+      if (!cards.length) return;
+      targetPage = Math.max(0, Math.min(pageCount() - 1, page));
+      var index = Math.min(cards.length - 1, targetPage * perPage());
+      irAPosicion(cards[index].offsetLeft);
+      syncUI();
+    }
+
+    function syncUI() {
+      var total = pageCount();
+      // Se usa la pagina objetivo, no el scroll: durante la animacion suave
+      // el scroll va por detras y los puntos parpadearian.
+      var page = Math.max(0, Math.min(total - 1, targetPage));
+
+      // Con una sola pagina no hace falta paginacion
+      if (nav)  nav.style.display  = total <= 1 ? 'none' : 'flex';
+      if (dots) dots.style.display = total <= 1 ? 'none' : 'flex';
+
+      if (prev) prev.disabled = page <= 0;
+      if (next) next.disabled = page >= total - 1;
+
+      var contador = dots && dots.querySelector('.carousel__count');
+      if (contador) {
+        contador.textContent = (page + 1) + ' / ' + total;
+      } else if (dots) {
+        Array.prototype.forEach.call(dots.children, function(dot, i) {
+          dot.classList.toggle('carousel__dot--active', i === page);
+          if (i === page) {
+            dot.setAttribute('aria-current', 'true');
+          } else {
+            dot.removeAttribute('aria-current');
+          }
+        });
+      }
+    }
+
+    // A partir de este numero de paginas una fila de puntos ocupa demasiado
+    // (pasa en movil, donde solo cabe una tarjeta por pagina): se muestra
+    // un contador compacto.
+    var MAX_PUNTOS = 7;
+
+    function buildDots() {
+      if (!dots) return;
+      var total = pageCount();
+      dots.innerHTML = '';
+
+      if (total > MAX_PUNTOS) {
+        dots.classList.add('carousel__dots--contador');
+        var contador = document.createElement('span');
+        contador.className = 'carousel__count';
+        contador.setAttribute('aria-live', 'polite');
+        dots.appendChild(contador);
+        syncUI();
+        return;
+      }
+
+      dots.classList.remove('carousel__dots--contador');
+      for (var i = 0; i < total; i++) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'carousel__dot';
+        dot.setAttribute('aria-label', 'Ir al grupo ' + (i + 1) + ' de ' + total);
+        dot.dataset.page = i;
+        dots.appendChild(dot);
+      }
+      syncUI();
+    }
+
+    if (prev) prev.addEventListener('click', function() { goToPage(targetPage - 1); });
+    if (next) next.addEventListener('click', function() { goToPage(targetPage + 1); });
+
+    if (dots) {
+      dots.addEventListener('click', function(e) {
+        var dot = e.target.closest('.carousel__dot');
+        if (dot) goToPage(parseInt(dot.dataset.page, 10));
+      });
+    }
+
+    // Flechas del teclado cuando el carrusel tiene el foco
+    track.addEventListener('keydown', function(e) {
+      if (e.key === 'ArrowRight') { e.preventDefault(); goToPage(targetPage + 1); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); goToPage(targetPage - 1); }
+    });
+
+    var pendiente, finScroll;
+    track.addEventListener('scroll', function() {
+      cancelAnimationFrame(pendiente);
+      pendiente = requestAnimationFrame(syncUI);
+
+      // Cuando el desplazamiento se detiene (incluido el gesto tactil)
+      // la pagina objetivo vuelve a coincidir con lo que se ve.
+      clearTimeout(finScroll);
+      finScroll = setTimeout(function() {
+        targetPage = currentPage();
+        syncUI();
+      }, 120);
+    });
+
+    var redimension;
+    window.addEventListener('resize', function() {
+      clearTimeout(redimension);
+      redimension = setTimeout(buildDots, 150);
+    });
+
+    // Los filtros ocultan tarjetas, asi que hay que recalcular las paginas
+    window.refreshTreatmentsCarousel = function() {
+      clearTimeout(comprobacion);
+      track.scrollLeft = 0;
+      targetPage = 0;
+      buildDots();
+    };
+
+    buildDots();
+  })();
+
+  // ---- Menu movil (hamburguesa) ----
+  (function() {
+    var toggle = document.getElementById('navToggle');
+    var panel  = document.getElementById('mobileNav');
+    if (!toggle || !panel) return;
+
+    function closeMenu() {
+      panel.classList.remove('mobile-nav--open');
+      toggle.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('nav-open');
+    }
+
+    function openMenu() {
+      panel.classList.add('mobile-nav--open');
+      toggle.setAttribute('aria-expanded', 'true');
+      document.body.classList.add('nav-open');
+    }
+
+    toggle.addEventListener('click', function(e) {
+      e.stopPropagation();
+      if (panel.classList.contains('mobile-nav--open')) {
+        closeMenu();
+      } else {
+        openMenu();
+      }
+    });
+
+    // Cerrar al navegar
+    panel.addEventListener('click', function(e) {
+      if (e.target.closest('a')) closeMenu();
+    });
+
+    // Cerrar al hacer clic fuera
+    document.addEventListener('click', function(e) {
+      if (!panel.classList.contains('mobile-nav--open')) return;
+      if (e.target.closest('#mobileNav') || e.target.closest('#navToggle')) return;
+      closeMenu();
+    });
+
+    // Cerrar con Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') closeMenu();
+    });
+
+    // Si se vuelve a escritorio, restablecer el estado
+    window.addEventListener('resize', function() {
+      if (window.innerWidth > 768) closeMenu();
     });
   })();
 
@@ -409,6 +662,10 @@
   }
 
   function setLoggedIn(user) {
+    // Los corazones de favoritos se pintan en servidor, pero al iniciar
+    // sesion sin recargar hay que traerlos.
+    if (typeof updateFavButtons === 'function') updateFavButtons();
+
     var guest = document.getElementById('userMenuGuest');
     var logged = document.getElementById('userMenuLogged');
     if (guest) guest.style.display = 'none';
@@ -529,6 +786,8 @@
       var email = document.getElementById('regCorreo').value.trim();
       var password = document.getElementById('regPassword').value;
       var confirm = document.getElementById('regPasswordConfirm').value;
+      var telefonoEl = document.getElementById('regTelefono');
+      var telefono = telefonoEl ? telefonoEl.value.trim() : '';
 
       if (!name) {
         showError('registerError', 'Por favor ingresa tu nombre');
@@ -536,6 +795,11 @@
       }
       if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
         showError('registerError', 'Por favor ingresa un correo electrónico válido');
+        return;
+      }
+      if (!telefono || telefono.replace(/[^0-9]/g, '').length < 7) {
+        showError('registerError', 'Por favor ingresa un número de teléfono válido');
+        showToast('Por favor ingresa un número de teléfono válido', 'error');
         return;
       }
       if (password.length < 8) {
@@ -557,6 +821,7 @@
           email: email,
           password: password,
           password_confirm: confirm,
+          phone: telefono,
           csrf_token: csrfToken
         })
       })
@@ -680,6 +945,53 @@
         });
     }
 
+
+    // ---- Restablecer el formulario tras agendar ----
+    // Limpia tratamiento, especialista, fecha y hora. Los datos de contacto se
+    // conservan si hay sesión iniciada (vienen prellenados desde el servidor).
+    function resetBookingForm() {
+      // Tratamiento: primera opción seleccionable
+      if (selectServ && selectServ.options.length) {
+        for (var i = 0; i < selectServ.options.length; i++) {
+          if (!selectServ.options[i].disabled) {
+            selectServ.selectedIndex = i;
+            break;
+          }
+        }
+      }
+
+      // Especialista: "Aleatorio (disponible)"
+      var pills = document.querySelectorAll('.specialist-pill');
+      for (var p = 0; p < pills.length; p++) {
+        pills[p].classList.remove('specialist-pill--active');
+      }
+      var radioAleatorio = document.querySelector('input[name="esteticista_id"][value="0"]');
+      if (radioAleatorio) {
+        radioAleatorio.checked = true;
+        var pill = radioAleatorio.closest('.specialist-pill');
+        if (pill) pill.classList.add('specialist-pill--active');
+      }
+
+      // Fecha: hoy (nunca vacía, para que el selector de horas pueda cargar)
+      if (fechaInput) fechaInput.value = new Date().toISOString().split('T')[0];
+
+      // Hora: se repuebla con loadAvailableSlots()
+      if (horaSelect) horaSelect.innerHTML = '<option value="">Selecciona fecha primero</option>';
+
+      // Datos de contacto: solo se limpian para invitados
+      var loggedBox = document.getElementById('userMenuLogged');
+      var isUserLogged = loggedBox && loggedBox.style.display !== 'none';
+      if (!isUserLogged) {
+        ['bookNombre', 'bookCorreo', 'bookTelefono'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.value = '';
+        });
+      }
+
+      loadAvailableSlots();
+      if (typeof updateBookingSummary === 'function') updateBookingSummary();
+      if (typeof setStepperStep === 'function') setStepperStep(1);
+    }
     window.loadAvailableSlots = loadAvailableSlots;
 
     if (selectServ) {
@@ -852,18 +1164,12 @@
                 });
               }
             } else {
-              messageEl.innerHTML = '<span style="color:#27ae60; font-weight:600;">¡Cita agendada con éxito!</span> Puedes consultarla en <button type="button" id="linkMisCitasFromBooking" style="color:var(--color-olive); font-weight:600; text-decoration:underline; background:none; border:none; cursor:pointer; padding:0; font-size:inherit;">Mis citas</button>.';
-              var mcLink = document.getElementById('linkMisCitasFromBooking');
-              if (mcLink) {
-                mcLink.addEventListener('click', function() {
-                  var btn = document.getElementById('openCitasBtn');
-                  if (btn) btn.click();
-                });
-              }
+              messageEl.innerHTML = '<span style="color:#27ae60; font-weight:600;">¡Cita agendada con éxito!</span> ' +
+                'Puedes consultarla en <a href="cuenta.php?v=citas" style="color:var(--color-olive); font-weight:600;">Mis citas</a>.';
             }
           }
 
-          loadAvailableSlots();
+          resetBookingForm();
         } else {
           // Manejo de conflicto de horario del cliente o del especialista
           var errMsg = data.error || 'Error al agendar la cita.';
@@ -1226,6 +1532,24 @@
     }
   }
 
+  // ---- Apertura desde el correo: index.php?completar=1&email=... ----
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('completar') !== '1') return;
+    if (!document.getElementById('completeAccountModal')) return;
+
+    // Si ya hay sesion no tiene sentido completar la cuenta
+    var loggedBox = document.getElementById('userMenuLogged');
+    if (loggedBox && loggedBox.style.display !== 'none') return;
+
+    openCompleteAccountModal({ correo: params.get('email') || '' });
+
+    // Limpiar la URL para que no se reabra al recargar
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  })();
+
   (function initCompleteAccountEvents() {
     var form = document.getElementById('completeAccountForm');
     if (!form) return;
@@ -1430,14 +1754,15 @@
 
   // ---- Favoritos ----
   (function() {
+    // El listado solo existe en el area de cliente, pero el corazon de las
+    // tarjetas esta en el sitio publico: toggleFav se define siempre.
     var btn = document.getElementById('openFavoritosBtn');
-    if (!btn) return;
-
-    btn.addEventListener('click', loadFavoritos);
+    if (btn) btn.addEventListener('click', loadFavoritos);
 
     function loadFavoritos() {
       var container = document.getElementById('favoritosList');
-      container.innerHTML = '<p style="text-align:center; color:#999;">Cargando...</p>';
+      if (!container) return;
+      container.innerHTML = '<p class="modal__empty">Cargando...</p>';
 
       fetch('api/favorites/list.php')
         .then(function(r) { return r.json(); })

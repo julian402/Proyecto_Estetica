@@ -41,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $input['action'] ?? 'create';
 
     if ($action === 'create') {
-        $subcatId = (int) ($input['subcategoria_id'] ?? 0);
-        $nombre   = trim($input['nombre'] ?? '');
+        $subcatId = (int) ($input['subcategoria_id'] ?? $input['id_subcategoria'] ?? 0);
+        $nombre   = trim($input['nombre'] ?? $input['nombre_servicio'] ?? '');
         $desc     = trim($input['descripcion'] ?? '');
         $duracion = (int) ($input['duracion_minutos'] ?? 0);
         $precio   = (float) ($input['precio'] ?? 0);
@@ -68,8 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update') {
         $id       = (int) ($input['id_servicio'] ?? $input['id'] ?? 0);
-        $subcatId = (int) ($input['subcategoria_id'] ?? 0);
-        $nombre   = trim($input['nombre'] ?? '');
+        $subcatId = (int) ($input['subcategoria_id'] ?? $input['id_subcategoria'] ?? 0);
+        $nombre   = trim($input['nombre'] ?? $input['nombre_servicio'] ?? '');
         $desc     = trim($input['descripcion'] ?? '');
         $duracion = (int) ($input['duracion_minutos'] ?? 0);
         $precio   = (float) ($input['precio'] ?? 0);

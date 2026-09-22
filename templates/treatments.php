@@ -8,20 +8,32 @@
         reservalo en menos de un minuto.
       </p>
 
-      <div class="filter-tabs">
-        <button class="filter-tab filter-tab--active" data-filter="todos">Todos</button>
-        <button class="filter-tab" data-filter="faciales">Faciales</button>
-        <button class="filter-tab" data-filter="corporales">Corporales</button>
-        <button class="filter-tab" data-filter="populares">Mas reservados</button>
+      <div class="treatments__toolbar">
+        <div class="filter-tabs">
+          <button class="filter-tab filter-tab--active" data-filter="todos">Todos</button>
+          <button class="filter-tab" data-filter="faciales">Faciales</button>
+          <button class="filter-tab" data-filter="corporales">Corporales</button>
+          <button class="filter-tab" data-filter="populares">Mas reservados</button>
+        </div>
+
+        <div class="carousel__nav" id="treatmentsNav">
+          <button class="carousel__arrow" id="treatPrev" type="button" aria-label="Tratamientos anteriores" aria-controls="treatmentsTrack">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <button class="carousel__arrow" id="treatNext" type="button" aria-label="Siguientes tratamientos" aria-controls="treatmentsTrack">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          </button>
+        </div>
       </div>
 
-      <div class="treatments__grid">
+      <div class="carousel__track" id="treatmentsTrack" tabindex="0" aria-label="Lista de tratamientos">
         <?php
         $treatmentImages = [
           'Glass Skin Facial' => 'assets/images/glass-skin.jpg',
           'Limpieza Profunda K-Derm' => 'assets/images/limpieza-profunda.jpg',
           'Masaje Relajante Hanul' => 'assets/images/masaje-relajante.jpg',
         ];
+        $favoritoIds = $favoritoIds ?? [];
         foreach ($treatments as $index => $t):
           $catLower = strtolower($t['nombre_categoria']);
           $filterCat = $catLower === 'facial' ? 'faciales' : 'corporales';
@@ -43,7 +55,7 @@
             <p class="treatment-card__meta"><?php echo (int)$t['duracion_minutos']; ?> min · Incluye diagnostico</p>
             <div class="treatment-card__footer">
               <span class="treatment-card__price">$<?php echo number_format($t['precio'], 0, '', '.'); ?></span>
-              <button class="treatment-card__fav" data-servicio-id="<?php echo (int)$t['id_servicio']; ?>" aria-label="Favorito" title="Agregar a favoritos">
+              <button class="treatment-card__fav<?php echo in_array((int)$t['id_servicio'], $favoritoIds) ? ' treatment-card__fav--active' : ''; ?>" data-servicio-id="<?php echo (int)$t['id_servicio']; ?>" aria-label="Favorito" title="Agregar a favoritos">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               </button>
               <a href="#agendar" class="btn btn--primary btn--sm" data-treatment="<?php echo $index; ?>" data-servicio-id="<?php echo (int)$t['id_servicio']; ?>">Reservar</a>
@@ -52,5 +64,7 @@
         </article>
         <?php endforeach; ?>
       </div>
+
+      <div class="carousel__dots" id="treatmentsDots" aria-label="Paginas de tratamientos"></div>
     </div>
   </section>

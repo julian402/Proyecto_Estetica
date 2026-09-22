@@ -65,6 +65,11 @@
   }
 
   // ============================================================
+  // NAVEGACIÓN Y BARRA LATERAL
+  // La logica vive en js/panel.js, compartida con el area de cliente.
+  // ============================================================
+  var showView = window.PanelUI.showView;
+
   // TAREA 16: MODO OSCURO (DARK MODE)
   // ============================================================
   var themeToggleBtn  = document.getElementById('themeToggleBtn');
@@ -195,6 +200,14 @@
           updateCounters(data.stats);
         }
 
+        var hint = document.getElementById('reservasCount');
+        var total = (data.reservas || []).length;
+        if (hint) {
+          hint.textContent = total === 0
+            ? 'Sin resultados para los filtros actuales'
+            : total + (total === 1 ? ' cita encontrada' : ' citas encontradas');
+        }
+
         if (!data.reservas || data.reservas.length === 0) {
           tbody.innerHTML = '<tr><td colspan="9" class="dashboard__empty">No se encontraron reservas con los filtros seleccionados</td></tr>';
           return;
@@ -216,7 +229,7 @@
           }
           selectHtml += '</select>';
 
-          var telInfo = r.telefono_cliente ? '<br><small style="color:#888;">📞 ' + escHtml(r.telefono_cliente) + '</small>' : '';
+          var telInfo = r.telefono_cliente ? '<br><small class="cell-muted">📞 ' + escHtml(r.telefono_cliente) + '</small>' : '';
 
           // Tarea 23: Botón para reprogramar cita en cada fila activa
           var canReschedule = (estadoId === 1 || estadoId === 2 || estadoId === 5);
@@ -232,18 +245,18 @@
               'title="Reprogramar fecha u hora">' +
               '🗓 Reprogramar' +
             '</button>' :
-            '<span style="color:#aaa; font-size:0.75rem;">—</span>';
+            '<span class="cell-muted">—</span>';
 
           return '<tr data-reserva-row="' + r.id_reserva + '">' +
-            '<td><strong>#' + r.id_reserva + '</strong></td>' +
-            '<td>' + escHtml(r.nombre_cliente) + '<br><small style="color:#888;">' + escHtml(r.correo_cliente) + '</small>' + telInfo + '</td>' +
-            '<td>' + escHtml(r.nombre_servicio) + '<br><small style="color:#888;">' + formatMoney(r.precio) + '</small></td>' +
-            '<td>' + escHtml(r.nombre_esteticista) + '</td>' +
-            '<td>' + fechaStr + '</td>' +
-            '<td>' + horaStr + '</td>' +
-            '<td><span class="status-badge status-badge--' + cls + '">' + escHtml(r.nombre_estado) + '</span></td>' +
-            '<td>' + selectHtml + '</td>' +
-            '<td>' + reprogBtn + '</td>' +
+            '<td data-label="#"><strong>#' + r.id_reserva + '</strong></td>' +
+            '<td data-label="Cliente">' + escHtml(r.nombre_cliente) + '<br><small class="cell-muted">' + escHtml(r.correo_cliente) + '</small>' + telInfo + '</td>' +
+            '<td data-label="Servicio">' + escHtml(r.nombre_servicio) + '<br><small class="cell-muted">' + formatMoney(r.precio) + '</small></td>' +
+            '<td data-label="Especialista">' + escHtml(r.nombre_esteticista) + '</td>' +
+            '<td data-label="Fecha">' + fechaStr + '</td>' +
+            '<td data-label="Hora">' + horaStr + '</td>' +
+            '<td data-label="Estado"><span class="status-badge status-badge--' + cls + '">' + escHtml(r.nombre_estado) + '</span></td>' +
+            '<td data-label="Cambiar estado">' + selectHtml + '</td>' +
+            '<td data-label="Acciones">' + reprogBtn + '</td>' +
           '</tr>';
         }).join('');
 
@@ -443,25 +456,25 @@
     reprogHora.innerHTML = '<option value="">Consultando horarios...</option>';
     if (reprogSlotsHelp) reprogSlotsHelp.textContent = 'Buscando horarios disponibles sin conflictos...';
 
-    var url = 'api/appointments/availability.php?service_id=' + encodeURIComponent(servId) +
+    var url = 'api/appointments/availability.php?servicio_id=' + encodeURIComponent(servId) +
               '&date=' + encodeURIComponent(fecha) +
               (estId ? '&esteticista_id=' + encodeURIComponent(estId) : '');
 
     fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (!data.success || !data.available_slots || data.available_slots.length === 0) {
+        if (!data.success || !data.slots || data.slots.length === 0) {
           reprogHora.innerHTML = '<option value="">No hay horarios disponibles en esta fecha</option>';
           if (reprogSlotsHelp) reprogSlotsHelp.textContent = 'Prueba con otra fecha u otro especialista.';
           return;
         }
 
         reprogHora.innerHTML = '<option value="">Selecciona un horario...</option>' +
-          data.available_slots.map(function(slot) {
+          data.slots.map(function(slot) {
             return '<option value="' + escHtml(slot) + '">' + escHtml(slot) + '</option>';
           }).join('');
 
-        if (reprogSlotsHelp) reprogSlotsHelp.textContent = data.available_slots.length + ' turnos disponibles.';
+        if (reprogSlotsHelp) reprogSlotsHelp.textContent = data.slots.length + ' turnos disponibles.';
       })
       .catch(function() {
         reprogHora.innerHTML = '<option value="">Error al cargar horarios</option>';
@@ -497,9 +510,9 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           reserva_id: rId,
-          nueva_fecha: fecha,
-          nueva_hora: hora,
-          id_esteticista: estId,
+          date: fecha,
+          time: hora,
+          esteticista_id: estId,
           csrf_token: csrfToken
         })
       })
@@ -524,7 +537,7 @@
   }
 
   // ============================================================
-  // MODAL: NUEVA CITA TELEFÓNICA (RECEPCIÓN - HU11)
+  // MODAL: NUEVA CITA TELEFÓNICA (RECEPCIÓN)
   // ============================================================
   var btnOpenNuevaCita = document.getElementById('btnOpenNuevaCita');
   var formNuevaCita    = document.getElementById('formNuevaCita');
@@ -539,7 +552,6 @@
       if (formNuevaCita) formNuevaCita.reset();
       if (ncError) ncError.style.display = 'none';
       if (ncFecha) ncFecha.value = new Date().toISOString().substring(0, 10);
-      openModal('modalNuevaCita');
       fetchAvailableSlotsForNuevaCita();
     });
   }
@@ -557,19 +569,19 @@
 
     ncHora.innerHTML = '<option value="">Consultando disponibilidad...</option>';
 
-    var url = 'api/appointments/availability.php?service_id=' + encodeURIComponent(servId) +
+    var url = 'api/appointments/availability.php?servicio_id=' + encodeURIComponent(servId) +
               '&date=' + encodeURIComponent(fecha) +
               (estId ? '&esteticista_id=' + encodeURIComponent(estId) : '');
 
     fetch(url)
       .then(function(r) { return r.json(); })
       .then(function(data) {
-        if (!data.success || !data.available_slots || data.available_slots.length === 0) {
+        if (!data.success || !data.slots || data.slots.length === 0) {
           ncHora.innerHTML = '<option value="">Sin turnos disponibles en esta fecha</option>';
           return;
         }
         ncHora.innerHTML = '<option value="">Selecciona horario...</option>' +
-          data.available_slots.map(function(s) {
+          data.slots.map(function(s) {
             return '<option value="' + escHtml(s) + '">' + escHtml(s) + '</option>';
           }).join('');
       })
@@ -621,7 +633,7 @@
         if (btnSub) { btnSub.disabled = false; btnSub.textContent = 'Guardar y Confirmar Cita'; }
         if (data.success) {
           showToast('Cita creada exitosamente #' + data.reserva.id, 'success');
-          closeModal('modalNuevaCita');
+          showView('viewDashboard');
           loadReservas();
         } else {
           ncError.textContent = data.error || 'Error al agendar cita';
@@ -637,7 +649,7 @@
   }
 
   // ============================================================
-  // MODAL: BLOQUEO DE AGENDA / BREAKS (HU13)
+  // MODAL: BLOQUEO DE AGENDA / DESCANSOS
   // ============================================================
   var btnOpenBloqueo     = document.getElementById('btnOpenBloqueo');
   var formBloqueo        = document.getElementById('formBloqueo');
@@ -705,7 +717,6 @@
   if (btnOpenBloqueo) {
     btnOpenBloqueo.addEventListener('click', function() {
       if (bloqError) bloqError.style.display = 'none';
-      openModal('modalBloqueo');
       loadBloqueos();
     });
   }
@@ -757,7 +768,7 @@
   }
 
   // ============================================================
-  // MODAL: CONTINGENCIA DE ESTETICISTA (HU14)
+  // MODAL: CONTINGENCIA DE ESPECIALISTA
   // ============================================================
   var btnOpenContingencia        = document.getElementById('btnOpenContingencia');
   var btnConsultarContingencia   = document.getElementById('btnConsultarContingencia');
@@ -771,8 +782,80 @@
 
   if (btnOpenContingencia) {
     btnOpenContingencia.addEventListener('click', function() {
-      openModal('modalContingencia');
+      resetContingencyForm();
+      loadContingencyHistory();
     });
+  }
+
+  // Deja la pantalla como al entrar: sin resultados ni seleccion previa.
+  function resetContingencyForm() {
+    if (contResultados) contResultados.style.display = 'none';
+    if (contCitasBody)  contCitasBody.innerHTML = '';
+    if (contTotalAfectadas) contTotalAfectadas.textContent = '0';
+    if (contSelectAll) contSelectAll.checked = false;
+
+    var destino = document.getElementById('contNuevoEsteticista');
+    if (destino) destino.selectedIndex = 0;
+
+    var fecha = document.getElementById('contFecha');
+    if (fecha) fecha.value = '';
+
+    var especialista = document.getElementById('contEsteticista');
+    if (especialista) especialista.selectedIndex = 0;
+  }
+
+  // Texto legible para cada tipo de accion registrada en auditoria.
+  var ETIQUETAS_CONTINGENCIA = {
+    BLOCK_DAY:            { texto: 'Día bloqueado',     clase: 'reasignada' },
+    REASSIGN_APPOINTMENT: { texto: 'Cita reasignada',   clase: 'confirmada' },
+    CANCEL_APPOINTMENT:   { texto: 'Cita cancelada',    clase: 'cancelada'  },
+    APPLY_CONTINGENCY:    { texto: 'Plan aplicado',     clase: 'pendiente'  }
+  };
+
+  function loadContingencyHistory() {
+    var lista = document.getElementById('contHistorial');
+    if (!lista) return;
+
+    fetch('api/admin/contingency.php?historial=1')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success || !data.historial || data.historial.length === 0) {
+          lista.innerHTML = '<li class="timeline__vacio">Todavía no se ha realizado ninguna acción de contingencia</li>';
+          return;
+        }
+
+        lista.innerHTML = data.historial.map(function(item) {
+          var etiqueta = ETIQUETAS_CONTINGENCIA[item.accion] || { texto: item.accion, clase: 'pendiente' };
+          var cuando = item.fecha_hora ? item.fecha_hora.substring(0, 16).replace(' ', ' · ') : '';
+
+          return '<li class="timeline__item">' +
+            '<span class="status-badge status-badge--' + etiqueta.clase + '">' + escHtml(etiqueta.texto) + '</span>' +
+            '<div class="timeline__cuerpo">' +
+              '<p class="timeline__detalle">' + escHtml(item.detalles || 'Sin detalle') + '</p>' +
+              '<p class="timeline__meta">' + escHtml(cuando) + ' · ' + escHtml(item.autor) + '</p>' +
+            '</div>' +
+          '</li>';
+        }).join('');
+      })
+      .catch(function() {
+        lista.innerHTML = '<li class="timeline__vacio">No se pudo cargar el historial</li>';
+      });
+  }
+
+  // Las acciones en lote pueden omitir citas por choque de agenda:
+  // se avisa una por una para que quede claro que paso con cada una.
+  function mostrarAvisos(res) {
+    if (!res.avisos || res.avisos.length === 0) return;
+    res.avisos.forEach(function(aviso, i) {
+      setTimeout(function() { showToast(aviso, 'warning'); }, 400 * (i + 1));
+    });
+  }
+
+  // Tras cualquier accion: se limpia la pantalla y se refresca el registro.
+  function afterContingencyAction() {
+    resetContingencyForm();
+    loadContingencyHistory();
+    loadReservas();
   }
 
   function fetchContingencyAppointments() {
@@ -796,6 +879,21 @@
 
         contTotalAfectadas.textContent = data.total;
 
+        // El destino se rellena con lo que devuelve la API, que ya excluye al
+        // especialista ausente: reasignarle sus propias citas no tiene sentido.
+        var destino = document.getElementById('contNuevoEsteticista');
+        if (destino) {
+          var disponibles = data.otros_esteticistas || data.esteticistas || [];
+          destino.innerHTML = '<option value="">Reasignar a especialista...</option>' +
+            disponibles.map(function(e) {
+              return '<option value="' + e.id_usuario + '">' + escHtml(e.nombre) + '</option>';
+            }).join('');
+
+          if (disponibles.length === 0) {
+            destino.innerHTML = '<option value="">No hay otros especialistas disponibles</option>';
+          }
+        }
+
         if (!data.reservas || data.reservas.length === 0) {
           contCitasBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">No hay citas activas para este especialista en esta fecha</td></tr>';
           return;
@@ -813,6 +911,11 @@
           '</tr>';
         }).join('');
       });
+  }
+
+  var btnRefrescarHistorial = document.getElementById('btnRefrescarHistorial');
+  if (btnRefrescarHistorial) {
+    btnRefrescarHistorial.addEventListener('click', loadContingencyHistory);
   }
 
   if (btnConsultarContingencia) {
@@ -864,9 +967,9 @@
       .then(function(r) { return r.json(); })
       .then(function(res) {
         if (res.success) {
-          showToast(res.message, 'success');
-          fetchContingencyAppointments();
-          loadReservas();
+          showToast(res.message, res.reasignadas > 0 ? 'success' : 'warning');
+          mostrarAvisos(res);
+          afterContingencyAction();
         } else {
           showToast(res.error || 'Error al reasignar', 'error');
         }
@@ -891,8 +994,7 @@
         .then(function(res) {
           if (res.success) {
             showToast(res.message, 'info');
-            fetchContingencyAppointments();
-            loadReservas();
+            afterContingencyAction();
           } else {
             showToast(res.error || 'Error al cancelar', 'error');
           }
@@ -913,16 +1015,17 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'block_day',
-            id_esteticista: estId,
+            esteticista_id: estId,
             fecha: fecha,
-            motivo: 'Incapacidad / Ausencia de contingencia (HU14)',
+            motivo: 'Incapacidad o ausencia imprevista del especialista',
             csrf_token: csrfToken
           })
         })
         .then(function(r) { return r.json(); })
         .then(function(res) {
           if (res.success) {
-            showToast('Día bloqueado con éxito', 'success');
+            showToast(res.message || 'Día bloqueado con éxito', 'success');
+            afterContingencyAction();
           } else {
             showToast(res.error || 'Error al bloquear día', 'error');
           }
@@ -932,7 +1035,7 @@
   }
 
   // ============================================================
-  // MODAL: GESTIÓN DE SERVICIOS (CRUD SUPERADMIN)
+  // MODAL: GESTIÓN DE SERVICIOS
   // ============================================================
   var btnOpenServicios    = document.getElementById('btnOpenServicios');
   var formServicioCrud    = document.getElementById('formServicioCrud');
@@ -957,7 +1060,7 @@
 
           return '<tr>' +
             '<td>#' + s.id_servicio + '</td>' +
-            '<td><strong>' + escHtml(s.nombre_servicio) + '</strong><br><small style="color:#888;">' + escHtml(s.nombre_categoria) + ' / ' + escHtml(s.nombre_subcategoria) + '</small></td>' +
+            '<td><strong>' + escHtml(s.nombre_servicio) + '</strong><br><small class="cell-muted">' + escHtml(s.nombre_categoria) + ' / ' + escHtml(s.nombre_subcategoria) + '</small></td>' +
             '<td>' + s.duracion_minutos + ' min</td>' +
             '<td>' + formatMoney(s.precio) + '</td>' +
             '<td>' + actBadge + '</td>' +
@@ -1004,7 +1107,6 @@
 
   if (btnOpenServicios) {
     btnOpenServicios.addEventListener('click', function() {
-      openModal('modalServicios');
       loadServiciosCrud();
     });
   }
@@ -1025,10 +1127,10 @@
       var payload = {
         action: id ? 'update' : 'create',
         id_servicio: id || undefined,
-        nombre_servicio: document.getElementById('crudServNombre').value.trim(),
+        nombre: document.getElementById('crudServNombre').value.trim(),
         precio: parseFloat(document.getElementById('crudServPrecio').value),
         duracion_minutos: parseInt(document.getElementById('crudServDuracion').value, 10),
-        id_subcategoria: parseInt(document.getElementById('crudServSubcat').value, 10),
+        subcategoria_id: parseInt(document.getElementById('crudServSubcat').value, 10),
         descripcion: document.getElementById('crudServDesc').value.trim(),
         csrf_token: csrfToken
       };
@@ -1055,7 +1157,7 @@
   }
 
   // ============================================================
-  // MODAL: GESTIÓN DE PERSONAL (CRUD SUPERADMIN)
+  // MODAL: GESTIÓN DE PERSONAL
   // ============================================================
   var btnOpenPersonal     = document.getElementById('btnOpenPersonal');
   var formPersonalCrud    = document.getElementById('formPersonalCrud');
@@ -1069,7 +1171,7 @@
     if (!tablaPersonalBody) return;
     tablaPersonalBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando empleados...</td></tr>';
 
-    fetch('api/admin/staff.php')
+    fetch('api/admin/employees.php')
       .then(function(r) { return r.json(); })
       .then(function(data) {
         if (!data.success || !data.staff) return;
@@ -1083,7 +1185,7 @@
 
           return '<tr>' +
             '<td>#' + u.id_usuario + '</td>' +
-            '<td><strong>' + escHtml(u.nombre) + '</strong><br><small style="color:#888;">📞 ' + escHtml(u.telefono || 'Sin tel') + '</small></td>' +
+            '<td><strong>' + escHtml(u.nombre) + '</strong><br><small class="cell-muted">📞 ' + escHtml(u.telefono || 'Sin tel') + '</small></td>' +
             '<td>' + escHtml(u.correo) + '</td>' +
             '<td>' + roleBadge + '</td>' +
             '<td>' + actBadge + '</td>' +
@@ -1112,7 +1214,7 @@
         tablaPersonalBody.querySelectorAll('.btn-toggle-staff').forEach(function(btn) {
           btn.addEventListener('click', function() {
             var uId = parseInt(this.dataset.id, 10);
-            fetch('api/admin/staff.php', {
+            fetch('api/admin/employees.php', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ action: 'toggle', id_usuario: uId, csrf_token: csrfToken })
@@ -1133,7 +1235,6 @@
 
   if (btnOpenPersonal) {
     btnOpenPersonal.addEventListener('click', function() {
-      openModal('modalPersonal');
       loadPersonalCrud();
     });
   }
@@ -1170,7 +1271,7 @@
         csrf_token: csrfToken
       };
 
-      fetch('api/admin/staff.php', {
+      fetch('api/admin/employees.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -1217,7 +1318,7 @@
           return '<tr>' +
             '<td>#' + l.id_log + '</td>' +
             '<td>' + fStr + '</td>' +
-            '<td><strong>' + escHtml(l.nombre_usuario) + '</strong><br><small style="color:#888;">' + escHtml(l.correo_usuario) + '</small></td>' +
+            '<td><strong>' + escHtml(l.nombre_usuario) + '</strong><br><small class="cell-muted">' + escHtml(l.correo_usuario) + '</small></td>' +
             '<td><span class="user-pill__badge user-pill__badge--' + escHtml(l.nombre_rol.toLowerCase()) + '">' + escHtml(l.nombre_rol) + '</span></td>' +
             '<td><code>' + escHtml(l.accion) + '</code></td>' +
             '<td><span class="status-badge" style="background:#eee;color:#444;">' + escHtml(l.tabla_afectada) + '</span></td>' +
@@ -1231,13 +1332,99 @@
 
   if (btnOpenLogs) {
     btnOpenLogs.addEventListener('click', function() {
-      openModal('modalLogs');
       loadAuditLogs();
     });
   }
 
   // ============================================================
-  // MODAL: GENERAR INFORME IMPRIMIBLE (HU8)
+  // MODAL: CORREOS ENVIADOS
+  // ============================================================
+  var btnOpenCorreos    = document.getElementById('btnOpenCorreos');
+  var tablaCorreosBody  = document.getElementById('tablaCorreosBody');
+  var correoPreview     = document.getElementById('correoPreview');
+  var correoPreviewFrm  = document.getElementById('correoPreviewFrame');
+  var correoPreviewAsun = document.getElementById('correoPreviewAsunto');
+  var btnCerrarPreview  = document.getElementById('btnCerrarPreview');
+  var correosTransporte = document.getElementById('correosTransporte');
+
+  function loadCorreos() {
+    if (!tablaCorreosBody) return;
+    tablaCorreosBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Cargando correos...</td></tr>';
+
+    fetch('api/admin/emails.php')
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (!data.success) {
+          tablaCorreosBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">' + escHtml(data.error || 'Error al cargar') + '</td></tr>';
+          return;
+        }
+
+        if (correosTransporte) {
+          correosTransporte.textContent = data.transport === 'smtp'
+            ? 'Envío SMTP activo'
+            : 'Modo registro (sin envío real)';
+        }
+
+        if (!data.correos || data.correos.length === 0) {
+          tablaCorreosBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Todavía no se ha enviado ningún correo</td></tr>';
+          return;
+        }
+
+        tablaCorreosBody.innerHTML = data.correos.map(function(c) {
+          var esError = (c.estado || '').indexOf('error') === 0;
+          var badge = '<span class="status-badge status-badge--' + (esError ? 'cancelada' : 'confirmada') + '">' +
+                      escHtml(c.estado) + '</span>';
+
+          return '<tr>' +
+            '<td data-label="#">#' + c.id_correo + '</td>' +
+            '<td data-label="Fecha y hora">' + escHtml(c.enviado_en) + '</td>' +
+            '<td data-label="Destinatario">' + escHtml(c.destinatario) + '</td>' +
+            '<td data-label="Asunto">' + escHtml(c.asunto) + '</td>' +
+            '<td data-label="Estado">' + badge + '</td>' +
+            '<td data-label="Acciones">' +
+              '<button type="button" class="btn btn--outline btn--xs btn-ver-correo" data-id="' + c.id_correo + '">Ver</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('');
+
+        tablaCorreosBody.querySelectorAll('.btn-ver-correo').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var cId = this.dataset.id;
+            fetch('api/admin/emails.php?id=' + encodeURIComponent(cId))
+              .then(function(r) { return r.json(); })
+              .then(function(res) {
+                if (!res.success) {
+                  showToast(res.error || 'No se pudo cargar el correo', 'error');
+                  return;
+                }
+                if (correoPreviewAsun) correoPreviewAsun.textContent = res.correo.asunto;
+                if (correoPreviewFrm) correoPreviewFrm.srcdoc = res.correo.cuerpo_html;
+                if (correoPreview) correoPreview.style.display = 'block';
+              });
+          });
+        });
+      })
+      .catch(function() {
+        tablaCorreosBody.innerHTML = '<tr><td colspan="6" class="dashboard__empty">Error de conexión</td></tr>';
+      });
+  }
+
+  if (btnOpenCorreos) {
+    btnOpenCorreos.addEventListener('click', function() {
+      if (correoPreview) correoPreview.style.display = 'none';
+      loadCorreos();
+    });
+  }
+
+  if (btnCerrarPreview) {
+    btnCerrarPreview.addEventListener('click', function() {
+      if (correoPreview) correoPreview.style.display = 'none';
+      if (correoPreviewFrm) correoPreviewFrm.srcdoc = '';
+    });
+  }
+
+  // ============================================================
+  // MODAL: GENERAR INFORME IMPRIMIBLE
   // ============================================================
   var btnOpenReporte       = document.getElementById('btnOpenReporte');
   var btnRecalcularReporte = document.getElementById('btnRecalcularReporte');
@@ -1290,7 +1477,7 @@
           '<span>' + escHtml(e.especialista) + '</span>' +
           '<span><strong>' + e.citas + ' citas</strong> (' + formatMoney(e.ingresos) + ')</span>' +
         '</div>';
-      }).join('') || '<p style="color:#888;">Sin citas en el período</p>';
+      }).join('') || '<p class="cell-muted">Sin citas en el período</p>';
     }
 
     // Desglose Servicios
@@ -1350,7 +1537,6 @@
 
   if (btnOpenReporte) {
     btnOpenReporte.addEventListener('click', function() {
-      openModal('modalReporte');
       fetchReportData();
     });
   }

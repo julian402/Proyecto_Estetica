@@ -475,4 +475,98 @@ class Appointment {
         }
         return false;
     }
+
+    /**
+     * Metricas agregadas para el informe ejecutivo.
+     * Rango opcional (Y-m-d) sobre la fecha de inicio de la reserva.
+     */
+    public static function getReportMetrics(?string $desde = null, ?string $hasta = null): array {
+        $db = getDB();
+
+        $where  = [];
+        $params = [];
+        if ($desde) {
+            $where[] = 'DATE(r.fecha_hora_inicio) >= :desde';
+            $params['desde'] = $desde;
+        }
+        if ($hasta) {
+            $where[] = 'DATE(r.fecha_hora_inicio) <= :hasta';
+            $params['hasta'] = $hasta;
+        }
+        $whereClause = $where ? ' WHERE ' . implode(' AND ', $where) : '';
+
+        // 1. Totales e ingresos (reales = Completada 3; proyectados = todo salvo Cancelada 4 y No_Show 6)
+        $sqlTotales = "SELECT
+                COUNT(*) AS total_citas,
+                COALESCE(SUM(CASE WHEN r.id_estado = 3 THEN s.precio ELSE 0 END), 0) AS ingresos_reales,
+                COALESCE(SUM(CASE WHEN r.id_estado NOT IN (4, 6) THEN s.precio ELSE 0 END), 0) AS ingresos_proyectados
+            FROM reservas r
+            JOIN servicios s ON r.id_servicio = s.id_servicio
+            $whereClause";
+        $stmt = $db->prepare($sqlTotales);
+        $stmt->execute($params);
+        $totales = $stmt->fetch() ?: [];
+
+        // 2. Conteo por estado
+        $sqlEstados = "SELECT er.nombre_estado, COUNT(*) AS total
+            FROM reservas r
+            JOIN estados_reserva er ON r.id_estado = er.id_estado
+            $whereClause
+            GROUP BY er.id_estado, er.nombre_estado
+            ORDER BY er.id_estado";
+        $stmt = $db->prepare($sqlEstados);
+        $stmt->execute($params);
+        $porEstado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $porEstado[$row['nombre_estado']] = (int) $row['total'];
+        }
+
+        // 3. Rendimiento por especialista
+        $sqlEsp = "SELECT est.nombre AS especialista,
+                          COUNT(*) AS citas,
+                          COALESCE(SUM(CASE WHEN r.id_estado = 3 THEN s.precio ELSE 0 END), 0) AS ingresos
+            FROM reservas r
+            JOIN servicios s ON r.id_servicio = s.id_servicio
+            JOIN usuarios est ON r.id_esteticista = est.id_usuario
+            $whereClause
+            GROUP BY est.id_usuario, est.nombre
+            ORDER BY citas DESC, est.nombre ASC";
+        $stmt = $db->prepare($sqlEsp);
+        $stmt->execute($params);
+        $porEspecialista = array_map(function ($row) {
+            return [
+                'especialista' => $row['especialista'],
+                'citas'        => (int) $row['citas'],
+                'ingresos'     => (float) $row['ingresos'],
+            ];
+        }, $stmt->fetchAll());
+
+        // 4. Tratamientos mas solicitados
+        $sqlServ = "SELECT s.nombre_servicio,
+                           COUNT(*) AS citas,
+                           COALESCE(SUM(CASE WHEN r.id_estado = 3 THEN s.precio ELSE 0 END), 0) AS ingresos
+            FROM reservas r
+            JOIN servicios s ON r.id_servicio = s.id_servicio
+            $whereClause
+            GROUP BY s.id_servicio, s.nombre_servicio
+            ORDER BY citas DESC, s.nombre_servicio ASC";
+        $stmt = $db->prepare($sqlServ);
+        $stmt->execute($params);
+        $porServicio = array_map(function ($row) {
+            return [
+                'nombre_servicio' => $row['nombre_servicio'],
+                'citas'           => (int) $row['citas'],
+                'ingresos'        => (float) $row['ingresos'],
+            ];
+        }, $stmt->fetchAll());
+
+        return [
+            'total_citas'          => (int) ($totales['total_citas'] ?? 0),
+            'ingresos_reales'      => (float) ($totales['ingresos_reales'] ?? 0),
+            'ingresos_proyectados' => (float) ($totales['ingresos_proyectados'] ?? 0),
+            'por_estado'           => $porEstado,
+            'por_especialista'     => $porEspecialista,
+            'por_servicio'         => $porServicio,
+        ];
+    }
 }
