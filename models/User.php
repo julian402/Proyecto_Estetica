@@ -140,10 +140,7 @@ class User {
         );
         return $stmt->fetchAll();
     }
-
-    // ============================================================
     // CRUD DE PERSONAL (EMPLEADOS: SuperAdmin 2, Recepcionista 3, Esteticista 4)
-    // ============================================================
 
     /**
      * Retorna todos los empleados del sistema (roles 2, 3, 4).

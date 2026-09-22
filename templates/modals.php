@@ -1,4 +1,3 @@
-  <!-- ========== MODAL LOGIN ========== -->
   <div class="modal" id="loginModal">
     <div class="modal__content">
       <button class="modal__close" data-close-modal aria-label="Cerrar">&times;</button>
@@ -21,8 +20,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ========== MODAL REGISTRO ========== -->
   <div class="modal" id="registerModal">
     <div class="modal__content">
       <button class="modal__close" data-close-modal aria-label="Cerrar">&times;</button>
@@ -43,8 +40,7 @@
                  pattern="[0-9+\s-]{7,15}" title="Ingresa un número de teléfono de al menos 7 dígitos"
                  autocomplete="tel" required>
         </div>
-        <!-- Tarea 21: Reducir contraseña a mínimo 8 caracteres -->
-        <div class="form-group">
+<div class="form-group">
           <label class="form-label" for="regPassword">Contraseña</label>
           <input type="password" class="form-input" id="regPassword" name="password" minlength="8" maxlength="128" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required>
         </div>
@@ -60,13 +56,7 @@
       </div>
     </div>
   </div>
-
-  <!-- Mis citas, Mi perfil y Favoritos ya no son ventanas: viven como
-       vistas del area de cliente en cuenta.php -->
-
-  <?php require __DIR__ . '/modal-reschedule.php'; ?>
-
-  <!-- ========== MODAL COMPLETAR CUENTA (GUEST A CLIENTE) ========== -->
+<?php require __DIR__ . '/modal-reschedule.php'; ?>
   <div class="modal" id="completeAccountModal">
     <div class="modal__content">
       <button class="modal__close" data-close-modal aria-label="Cerrar">&times;</button>
@@ -98,9 +88,7 @@
           </label>
           <input type="tel" class="form-input" id="completeTelefono" name="telefono" placeholder="300 123 4567" required aria-required="true" pattern="[0-9+\s-]{7,15}">
         </div>
-
-        <!-- Tarea 21: Mínimo 8 caracteres -->
-        <div class="form-group">
+<div class="form-group">
           <label class="form-label" for="completePassword">
             Contraseña <span class="required-asterisk" aria-hidden="true">*</span>
           </label>
@@ -122,4 +110,3 @@
       </div>
     </div>
   </div>
-

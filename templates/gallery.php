@@ -1,4 +1,3 @@
-  <!-- ========== GALERIA ========== -->
   <section class="gallery" id="galeria">
     <div class="container">
       <div class="gallery__heading">

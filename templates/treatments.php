@@ -1,4 +1,3 @@
-  <!-- ========== TRATAMIENTOS ========== -->
   <section class="treatments" id="tratamientos">
     <div class="container">
       <p class="section__label">MENU DE SERVICIOS</p>

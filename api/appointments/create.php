@@ -57,8 +57,6 @@ if ($nombre === '' || $correo === '') {
 if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
     json_response(['error' => 'Correo electronico invalido'], 422);
 }
-
-// Tarea 19 y 22: Validar telefono obligatorio
 if ($telefono === '') {
     json_response(['error' => 'El telefono es obligatorio para coordinar tu cita'], 422);
 }

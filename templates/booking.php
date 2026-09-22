@@ -1,4 +1,3 @@
-  <!-- ========== AGENDAMIENTO ========== -->
   <section class="booking" id="agendar">
     <div class="container">
       <p class="section__label">AGENDAMIENTO</p>
@@ -6,9 +5,7 @@
       <p class="section__description">
         Vive la experiencia K-Beauty. Solo necesitas tus datos de contacto para asegurar tu espacio de cuidado facial.
       </p>
-
-      <!-- Stepper -->
-      <div class="booking__card">
+<div class="booking__card">
         <div class="stepper" role="navigation" aria-label="Progreso de agendamiento">
           <div class="stepper__step stepper__step--active" data-step="1">
             <span class="stepper__number">1</span>
@@ -27,11 +24,8 @@
         </div>
 
         <div class="booking__layout">
-          <!-- Form -->
-          <form class="booking__form" id="bookingForm" novalidate>
+<form class="booking__form" id="bookingForm" novalidate>
             <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
-
-            <!-- PASO 1: Tratamiento y Especialista -->
             <div class="booking__step-group" id="stepGroup1">
               <div class="form-group">
                 <label class="form-label" for="tratamiento">
@@ -49,9 +43,7 @@
                   <?php endforeach; ?>
                 </select>
               </div>
-
-              <!-- Tarea 20: Especialista INMEDIATAMENTE DEBAJO de Tratamiento y ANTES de Fecha y Hora -->
-              <div class="form-group">
+<div class="form-group">
                 <label class="form-label" id="especialistaLabel">
                   Especialista <span class="required-asterisk" aria-hidden="true">*</span>
                 </label>
@@ -71,8 +63,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- PASO 2: Fecha y Hora -->
             <div class="booking__step-group" id="stepGroup2">
               <div class="form-row">
                 <div class="form-group">
@@ -91,8 +81,6 @@
                 </div>
               </div>
             </div>
-
-            <!-- PASO 3: Tus datos -->
             <div class="booking__step-group" id="stepGroup3">
               <div class="form-row">
                 <div class="form-group">
@@ -103,8 +91,7 @@
                          placeholder="Tu nombre completo"
                          <?php if ($currentUser): ?>value="<?php echo sanitize($currentUser['nombre']); ?>"<?php endif; ?>>
                 </div>
-                <!-- Tarea 19: Teléfono obligatorio en HU2 -->
-                <div class="form-group">
+<div class="form-group">
                   <label class="form-label" for="bookTelefono">
                     Teléfono <span class="required-asterisk" aria-hidden="true">*</span>
                   </label>
@@ -126,9 +113,7 @@
               </div>
             </div>
           </form>
-
-          <!-- Summary -->
-          <div class="booking__summary">
+<div class="booking__summary">
             <h3 class="booking__summary-title">Resumen de tu cita</h3>
             <div class="booking__summary-row">
               <span>Tratamiento</span>

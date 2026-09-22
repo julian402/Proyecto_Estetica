@@ -45,7 +45,6 @@ $currentPassword = $input['current_password'] ?? '';
 $newPassword     = $input['new_password'] ?? '';
 
 if ($newPassword !== '') {
-    // Tarea 21: Validar contrasena minimo 8 caracteres
     if (strlen($newPassword) < 8 || strlen($newPassword) > 128) {
         json_response(['error' => 'La nueva contrasena debe tener al menos 8 caracteres'], 422);
     }

@@ -44,8 +44,6 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 if (mb_strlen($name) > 100 || strlen($email) > 150) {
     json_response(['error' => 'Nombre o correo demasiado largo'], 422);
 }
-
-// Tarea 21: Reducir contrasena a minimo 8 caracteres
 if (strlen($password) < 8 || strlen($password) > 128) {
     json_response(['error' => 'La contrasena debe tener entre 8 y 128 caracteres'], 422);
 }

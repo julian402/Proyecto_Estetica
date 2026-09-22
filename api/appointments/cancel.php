@@ -14,8 +14,6 @@ require_login();
 
 $user = current_user();
 $rol = (int) ($user['id_rol'] ?? 0);
-
-// Tarea 14: Esteticistas reciben 403 expresamente
 if ($rol === 4) {
     json_response(['error' => 'Los esteticistas no tienen permisos para cancelar citas'], 403);
 }

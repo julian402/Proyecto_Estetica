@@ -65,8 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
             json_response(['error' => 'Correo electronico invalido'], 422);
         }
-
-        // Tarea 21: Minimo 8 caracteres
         if (strlen($password) < 8 || strlen($password) > 128) {
             json_response(['error' => 'La contrasena debe tener entre 8 y 128 caracteres'], 422);
         }
@@ -186,7 +184,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         try {
-            // HU09: Bloquea eliminacion si tiene citas pendientes
             User::deleteEmployee($id);
             log_audit($userId, 'DELETE_EMPLOYEE', 'usuarios', $id, "Empleado eliminado/desactivado id: {$id}");
             json_response([
@@ -194,7 +191,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'message' => 'Empleado procesado correctamente',
             ]);
         } catch (\DomainException $e) {
-            // HU09: Conflicto por citas pendientes
             json_response(['error' => $e->getMessage()], 409);
         } catch (\Throwable $e) {
             error_log('Error eliminando empleado: ' . $e->getMessage());

@@ -79,13 +79,9 @@ function strftime_es(): string {
   <script src="js/theme-init.js?v=<?php echo filemtime(__DIR__ . '/js/theme-init.js'); ?>"></script>
 </head>
 <body class="admin-body">
-
-  <!-- Capa oscura para el sidebar en movil -->
-  <div class="admin-overlay" id="adminOverlay"></div>
+<div class="admin-overlay" id="adminOverlay"></div>
 
   <div class="admin-shell">
-
-    <!-- ==================== SIDEBAR ==================== -->
     <aside class="sidebar" id="adminSidebar">
       <div class="sidebar__brand">
         <a href="index.php" class="sidebar__logo">
@@ -115,8 +111,7 @@ function strftime_es(): string {
             <span>Contingencia</span>
           </button>
         <?php endif; ?>
-        <!-- Bloqueo de agenda: disponible para esteticista y administradores -->
-        <button class="sidebar__item" id="btnOpenBloqueo" type="button" data-view="viewBloqueo" title="Bloquear horarios de descanso, almuerzo o incapacidad">
+<button class="sidebar__item" id="btnOpenBloqueo" type="button" data-view="viewBloqueo" title="Bloquear horarios de descanso, almuerzo o incapacidad">
           <?php echo admin_icon('clock'); ?>
           <span>Bloquear horario</span>
         </button>
@@ -171,8 +166,6 @@ function strftime_es(): string {
         </div>
       </div>
     </aside>
-
-    <!-- ==================== CONTENIDO ==================== -->
     <div class="admin-main">
 
       <header class="topbar">
@@ -195,12 +188,8 @@ function strftime_es(): string {
       </header>
 
       <main class="dashboard">
-
-        <!-- Vista principal -->
         <section class="view" id="viewDashboard" data-view-title="Dashboard">
-
-        <!-- Stats Cards -->
-        <div class="dashboard__stats">
+<div class="dashboard__stats">
           <div class="dashboard__stat-card dashboard__stat-card--total">
             <span class="dashboard__stat-number" id="statTotal"><?php echo $totalCitas; ?></span>
             <span class="dashboard__stat-label">Total Citas</span>
@@ -218,8 +207,6 @@ function strftime_es(): string {
             <span class="dashboard__stat-label">Completadas</span>
           </div>
         </div>
-
-        <!-- Panel de reservas: filtros + tabla -->
         <section class="panel">
           <div class="panel__head">
             <div>
@@ -291,7 +278,6 @@ function strftime_es(): string {
               Limpiar
             </button>
           </div>
-          <!-- Tabla de reservas -->
           <div class="dashboard__table-wrap">
             <table class="dashboard__table" id="reservasTable">
               <thead>
@@ -390,8 +376,6 @@ function strftime_es(): string {
             <p class="modal__note">
               Registra pausas de almuerzo, descansos o incapacidades para evitar solapamientos con reservas.
             </p>
-
-            <!-- Formulario de nuevo bloqueo -->
             <form class="modal__form modal__panel" id="formBloqueo">
               <h4 style="font-size: 0.95rem; margin-bottom: 12px;">Nuevo Bloqueo</h4>
               <div class="form-row" style="display: grid; grid-template-columns: <?php echo $isEsteticista ? '1fr 1fr' : '1fr 1fr 1fr'; ?>; gap: 12px;">
@@ -442,8 +426,6 @@ function strftime_es(): string {
                 + Guardar Bloqueo
               </button>
             </form>
-
-            <!-- Tabla de bloqueos activos -->
             <h4 style="font-size: 0.95rem; margin-bottom: 8px;">Bloqueos Registrados</h4>
             <div class="modal__scroll">
               <table class="dashboard__table" style="font-size: 0.82rem;">
@@ -510,12 +492,9 @@ function strftime_es(): string {
                     </tr>
                   </thead>
                   <tbody id="contCitasBody">
-                    <!-- Renderizado con JS -->
                   </tbody>
                 </table>
               </div>
-
-              <!-- Acciones en lote -->
               <div class="cont-actions modal__panel">
                 <h5 style="font-size: 0.85rem; margin-bottom: 10px;">Acciones sobre citas seleccionadas:</h5>
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
@@ -535,9 +514,7 @@ function strftime_es(): string {
               </div>
             </div>
           </div>
-
-          <!-- Registro de lo que se ha hecho desde esta pantalla -->
-          <div class="cont-historial">
+<div class="cont-historial">
             <div class="cont-historial__head">
               <h4 class="modal__section-title">Acciones realizadas</h4>
               <button type="button" class="btn btn--outline btn--xs" id="btnRefrescarHistorial">Actualizar</button>
@@ -551,8 +528,6 @@ function strftime_es(): string {
         <section class="view" id="viewServicios" data-view-subtitle="Catálogo de tratamientos del estudio" data-view-title="Tratamientos" hidden aria-labelledby="modalServTitle">
           <div class="panel panel--view">
             <h2 class="modal__title" id="modalServTitle">💆‍♀️ Gestión de Tratamientos</h2>
-      
-            <!-- Formulario para Crear/Editar Servicio -->
             <form class="modal__form modal__panel" id="formServicioCrud">
               <input type="hidden" id="crudServicioId">
               <h4 id="crudServicioTitle" style="font-size: 0.95rem; margin-bottom: 10px;">Nuevo Tratamiento</h4>
@@ -598,8 +573,6 @@ function strftime_es(): string {
                 <button type="button" class="btn btn--outline btn--sm" id="btnCancelServicioEdit" style="display: none;">Cancelar Edición</button>
               </div>
             </form>
-
-            <!-- Tabla de Servicios -->
             <h4 style="font-size: 0.95rem; margin-bottom: 8px;">Catálogo Actual</h4>
             <div class="modal__scroll">
               <table class="dashboard__table" style="font-size: 0.82rem;">
@@ -624,8 +597,6 @@ function strftime_es(): string {
         <section class="view" id="viewPersonal" data-view-subtitle="Empleados, roles y accesos" data-view-title="Personal" hidden aria-labelledby="modalPersTitle">
           <div class="panel panel--view">
             <h2 class="modal__title" id="modalPersTitle">👥 Gestión de Personal</h2>
-      
-            <!-- Formulario Empleado -->
             <form class="modal__form modal__panel" id="formPersonalCrud">
               <input type="hidden" id="crudStaffId">
               <h4 id="crudStaffTitle" style="font-size: 0.95rem; margin-bottom: 10px;">Nuevo Empleado</h4>
@@ -665,8 +636,6 @@ function strftime_es(): string {
                 <button type="button" class="btn btn--outline btn--sm" id="btnCancelStaffEdit" style="display: none;">Cancelar Edición</button>
               </div>
             </form>
-
-            <!-- Tabla de Personal -->
             <h4 style="font-size: 0.95rem; margin-bottom: 8px;">Equipo Registrado</h4>
             <div class="modal__scroll">
               <table class="dashboard__table" style="font-size: 0.82rem;">
@@ -755,11 +724,7 @@ function strftime_es(): string {
 
         <section class="view" id="viewReporte" data-view-subtitle="Métricas e informe imprimible" data-view-title="Informe" hidden aria-labelledby="modalRepTitle">
           <div class="panel panel--view">
-      
-            <!-- Contenedor Imprimible del Informe -->
             <div class="printable-report" id="printableReportArea">
-        
-              <!-- Encabezado del Reporte -->
               <div class="report-header">
                 <div class="report-header__brand">
                   <span class="report-logo-dot"></span>
@@ -773,8 +738,6 @@ function strftime_es(): string {
                   <p><strong>Emitido por:</strong> <?php echo sanitize($currentUser['nombre']); ?> (<?php echo $roleLabel; ?>)</p>
                 </div>
               </div>
-
-              <!-- Filtros del Reporte (no se imprimen) -->
               <div class="report-filters no-print" style="margin: 16px 0; padding: 12px; background: var(--color-bg-section); border-radius: 8px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 6px;">
                   <label class="filter-label" for="repDesde">Desde:</label>
@@ -791,8 +754,6 @@ function strftime_es(): string {
                   🖨 Imprimir Informe (PDF)
                 </button>
               </div>
-
-              <!-- KPIs del Reporte -->
               <div class="report-kpis" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px;">
                 <div class="report-kpi-card">
                   <span class="report-kpi-val" id="kpiTotalCitas">0</span>
@@ -811,34 +772,23 @@ function strftime_es(): string {
                   <span class="report-kpi-label">Efectividad de Asistencia</span>
                 </div>
               </div>
-
-              <!-- Secciones de Desglose -->
               <div class="report-breakdowns" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
-                <!-- Desglose por Estado -->
                 <div class="report-box">
                   <h4 style="margin-bottom: 8px; font-size: 0.9rem;">Citas por Estado</h4>
                   <div id="repEstadosContainer">
-                    <!-- Renderizado dinámicamente -->
                   </div>
                 </div>
-                <!-- Desglose por Especialista -->
                 <div class="report-box">
                   <h4 style="margin-bottom: 8px; font-size: 0.9rem;">Rendimiento por Especialista</h4>
                   <div id="repEspecialistasContainer">
-                    <!-- Renderizado dinámicamente -->
                   </div>
                 </div>
               </div>
-
-              <!-- Desglose por Tratamiento -->
               <div class="report-box" style="margin-bottom: 20px;">
                 <h4 style="margin-bottom: 8px; font-size: 0.9rem;">Tratamientos Más Solicitados</h4>
                 <div id="repServiciosContainer">
-                  <!-- Renderizado dinámicamente -->
                 </div>
               </div>
-
-              <!-- Tabla de Citas del Período -->
               <div class="report-table-box">
                 <h4 style="margin-bottom: 8px; font-size: 0.9rem;">Detalle de Reservas del Período</h4>
                 <div class="modal__scroll">
@@ -860,8 +810,6 @@ function strftime_es(): string {
                   </table>
                 </div>
               </div>
-
-              <!-- Pie de página de informe para impresión -->
               <div class="report-footer print-only" style="display: none; margin-top: 30px; border-top: 1px solid #ddd; padding-top: 12px; font-size: 0.75rem; color: #666; justify-content: space-between;">
                 <span>Hanul Beauty - Sistema K-Beauty</span>
                 <span>Confidencial - Uso Administrativo</span>
@@ -874,11 +822,7 @@ function strftime_es(): string {
       </main>
     </div>
   </div>
-
-  <!-- ==================== MODALES ADMINISTRATIVOS ==================== -->
-
-  <!-- 1. Modal Reprogramar Cita (Admin / Esteticista) - Tarea 23 -->
-  <div class="modal" id="modalReprogramar" role="dialog" aria-modal="true" aria-labelledby="modalReprogTitle">
+<div class="modal" id="modalReprogramar" role="dialog" aria-modal="true" aria-labelledby="modalReprogTitle">
     <div class="modal__content">
       <button class="modal__close" data-close-modal aria-label="Cerrar">&times;</button>
       <h2 class="modal__title" id="modalReprogTitle">Reprogramar Cita</h2>
@@ -887,8 +831,7 @@ function strftime_es(): string {
         <input type="hidden" id="reprogServicioId" name="servicio_id">
         
         <div class="reprog-summary modal__summary-box" id="reprogSummaryBox">
-          <!-- Llenado dinámicamente con JS -->
-        </div>
+</div>
 
         <div class="form-group">
           <label class="form-label" for="reprogEspecialista">Especialista</label>
@@ -924,27 +867,8 @@ function strftime_es(): string {
     </div>
   </div>
 
-  <!-- 2. Modal Nueva Cita por Teléfono (Recepción) -->
-
-  <!-- 3. Modal Bloqueo de Agenda / Descansos -->
-
-  <!-- 4. Modal Contingencia de Especialista -->
-
-  <!-- 5. Modal Gestión de Servicios -->
-
-  <!-- 6. Modal Gestión de Personal -->
-
-  <!-- 7. Modal Logs de Auditoría (SuperAdmin) -->
-
-  <!-- 9. Modal Correos Enviados (SuperAdmin) -->
-
-  <!-- 8. Modal Generar Informe Ejecutivo Imprimible -->
-
-  <!-- Toast container -->
-  <div class="toast-container" id="toastContainer"></div>
-
-  <!-- Tokens y variables de contexto -->
-  <input type="hidden" id="dashCsrf" value="<?php echo csrf_token(); ?>">
+<div class="toast-container" id="toastContainer"></div>
+<input type="hidden" id="dashCsrf" value="<?php echo csrf_token(); ?>">
   <input type="hidden" id="currentUserRole" value="<?php echo $userRole; ?>">
   <input type="hidden" id="currentUserId" value="<?php echo (int)$currentUser['id_usuario']; ?>">
 

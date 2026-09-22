@@ -1,8 +1,6 @@
 /* ===================================
    HANUL BEAUTY - Styles
    =================================== */
-
-/* ---------- Reset & Base ---------- */
 *,
 *::before,
 *::after {
@@ -79,15 +77,11 @@ button {
 input, select {
   font-family: inherit;
 }
-
-/* ---------- Container ---------- */
 .container {
   max-width: var(--container-max);
   margin: 0 auto;
   padding: 0 24px;
 }
-
-/* ---------- Typography ---------- */
 .section__label {
   font-size: 11px;
   font-weight: 600;
@@ -112,8 +106,6 @@ input, select {
   max-width: 480px;
   line-height: 1.7;
 }
-
-/* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -275,9 +267,6 @@ input, select {
   border-radius: 2px;
   transition: all 0.3s ease;
 }
-
-
-/* ---------- Menu movil (panel desplegable) ---------- */
 .mobile-nav {
   display: none;
   flex-direction: column;
@@ -557,8 +546,6 @@ body.nav-open {
   margin: 0;
   flex-wrap: wrap;
 }
-
-/* ---------- Carrusel horizontal ---------- */
 .carousel__nav {
   display: flex;
   gap: 8px;
@@ -2334,8 +2321,6 @@ body.nav-open {
   height: 18px;
   flex-shrink: 0;
 }
-
-/* ---------- Sidebar ---------- */
 .sidebar {
   display: flex;
   flex-direction: column;
@@ -2450,8 +2435,6 @@ body.nav-open {
 .sidebar__item--active:hover .icon {
   color: #fff;
 }
-
-/* ---------- Pie del sidebar ---------- */
 .sidebar__footer {
   display: flex;
   flex-direction: column;
@@ -2559,8 +2542,6 @@ body.nav-open {
   background-color: var(--color-bg-section);
   color: #c0554a;
 }
-
-/* ---------- Barra superior ---------- */
 .admin-main {
   display: flex;
   flex-direction: column;
@@ -2609,15 +2590,11 @@ body.nav-open {
   color: var(--color-text-muted);
   white-space: nowrap;
 }
-
-/* ---------- Área de contenido ---------- */
 .dashboard {
   flex: 1;
   padding: 26px 32px 48px;
   min-height: 0;
 }
-
-/* ---------- Tarjetas de métricas ---------- */
 .dashboard__stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -2672,8 +2649,6 @@ body.nav-open {
   text-transform: uppercase;
   color: var(--color-text-muted);
 }
-
-/* ---------- Avatar del header con sesion iniciada ---------- */
 .user-menu__toggle--link {
   display: inline-flex;
   align-items: center;
@@ -2711,8 +2686,6 @@ body.nav-open {
     display: none;
   }
 }
-
-/* ---------- Area de cliente ---------- */
 .sidebar__user-mail {
   font-size: 0.72rem;
   color: var(--color-text-muted);
@@ -2729,8 +2702,6 @@ body.nav-open {
 a.sidebar__item {
   text-decoration: none;
 }
-
-/* ---------- Vistas del panel ---------- */
 .view[hidden] {
   display: none;
 }
@@ -2773,8 +2744,6 @@ a.sidebar__item {
 .panel--view .modal__form {
   max-width: 100%;
 }
-
-/* ---------- Panel (tarjeta contenedora) ---------- */
 .panel {
   background-color: var(--color-bg-card);
   border: 1px solid var(--color-border);
@@ -2843,8 +2812,6 @@ a.sidebar__item {
   opacity: 0.4;
   cursor: not-allowed;
 }
-
-/* ---------- Filtros ---------- */
 .filters {
   display: flex;
   flex-wrap: wrap;
@@ -2883,8 +2850,6 @@ a.sidebar__item {
   height: 38px;
   flex: 0 0 auto;
 }
-
-/* ---------- Tabla ---------- */
 .dashboard__table-wrap {
   overflow-x: auto;
   overflow-y: hidden;
@@ -2924,8 +2889,6 @@ a.sidebar__item {
   color: var(--color-text-muted);
   font-size: 0.78rem;
 }
-
-/* ---------- Capa oscura del sidebar en móvil ---------- */
 .admin-overlay {
   display: none;
   position: fixed;
@@ -2937,8 +2900,6 @@ a.sidebar__item {
 .admin-overlay--visible {
   display: block;
 }
-
-/* ---------- Utilidades de modal ---------- */
 .modal__badge {
   display: inline-block;
   margin-left: 6px;
@@ -2999,8 +2960,6 @@ a.sidebar__item {
 .text-danger {
   color: #c0554a;
 }
-
-/* ---------- Registro de acciones de contingencia ---------- */
 .cont-historial {
   margin-top: 24px;
   padding-top: 20px;
@@ -3068,8 +3027,6 @@ a.sidebar__item {
   color: var(--color-text-muted);
   text-align: center;
 }
-
-/* ---------- Vista previa de correos ---------- */
 .correo-preview {
   margin-top: 16px;
   border: 1px solid var(--color-border);
@@ -3094,8 +3051,6 @@ a.sidebar__item {
   border: 0;
   background: #fff;
 }
-
-/* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
   .admin-shell {
     grid-template-columns: minmax(0, 1fr);

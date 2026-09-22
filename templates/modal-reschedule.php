@@ -1,15 +1,12 @@
-  <!-- ========== MODAL REPROGRAMAR CITA (CLIENTE) ==========
-       Parcial propio: lo usan index.php y cuenta.php. -->
-  <div class="modal" id="rescheduleModal">
+
+<div class="modal" id="rescheduleModal">
     <div class="modal__content">
       <button class="modal__close" data-close-modal aria-label="Cerrar">&times;</button>
       <div class="modal__header-kbeauty">
         <h2 class="modal__title">Reprogramar cita</h2>
         <p class="modal__subtitle">Elige una nueva fecha y horario para tu tratamiento facial.</p>
       </div>
-
-      <!-- Resumen de cita actual -->
-      <div class="reschedule-summary" id="rescheduleSummary">
+<div class="reschedule-summary" id="rescheduleSummary">
         <div class="reschedule-summary__row">
           <span>Tratamiento:</span>
           <strong id="rescheduleServicioNombre">-</strong>

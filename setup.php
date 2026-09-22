@@ -9,8 +9,6 @@
  *
  * Uso: abrir http://localhost/Proyecto_Estetica/setup.php en el navegador
  */
-
-// ---- Rutas ----
 $configFile   = __DIR__ . '/config/database.php';
 $exampleFile  = __DIR__ . '/config/database.php.example';
 $schemaFile   = __DIR__ . '/sql/schema.sql';
@@ -43,8 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit('Token de seguridad invalido. Recarga la pagina.');
     }
 }
-
-// ---- Estado ----
 $step           = 'config';   // config | install | done
 $message        = '';
 $messageType    = '';         // success | error | warning
@@ -52,10 +48,7 @@ $results        = [];
 $configExists   = file_exists($configFile);
 $dbExists       = false;
 $dbConnected    = false;
-
-// ============================================================
 // ACCION: Crear config/database.php
-// ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'config') {
     $hostRaw = $_POST['host'] ?? 'localhost';
     $dbnameRaw = $_POST['dbname'] ?? 'kbeauty_db';
@@ -102,10 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'confi
         $messageType = 'error';
     }
 }
-
-// ============================================================
 // Si config existe, intentar conexion a MySQL
-// ============================================================
 if ($configExists) {
     require_once $configFile;
     $step = 'install';
@@ -129,10 +119,7 @@ if ($configExists) {
         $step        = 'config';
     }
 }
-
-// ============================================================
 // ACCION: Instalar base de datos
-// ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'install' && $dbConnected) {
     $adminEmailRaw = $_POST['admin_email'] ?? '';
     $adminPassword = $_POST['admin_password'] ?? '';
@@ -198,10 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'insta
         }
     }
 }
-
-// ============================================================
 // Parser de SQL con soporte para DELIMITER (triggers)
-// ============================================================
 function executeSqlFile(PDO $pdo, string $filePath): array {
     $content   = file_get_contents($filePath);
     $lines     = explode("\n", $content);
@@ -425,9 +409,7 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
   <div class="setup">
     <div class="setup__logo">Hanul Beauty</div>
     <p class="setup__subtitle">Asistente de instalacion</p>
-
-    <!-- Indicador de pasos -->
-    <div class="steps">
+<div class="steps">
       <div class="step-indicator <?php
         echo $step === 'config' ? 'step-indicator--active' : 'step-indicator--done';
       ?>"></div>
@@ -438,15 +420,11 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
         echo $step === 'done' ? 'step-indicator--done' : '';
       ?>"></div>
     </div>
-
-    <!-- Mensajes -->
-    <?php if ($message): ?>
+<?php if ($message): ?>
       <div class="msg msg--<?php echo $messageType; ?>">
         <?php echo htmlspecialchars($message, ENT_QUOTES, 'UTF-8'); ?>
       </div>
     <?php endif; ?>
-
-    <!-- ======== PASO 1: CONFIGURACION ======== -->
     <?php if ($step === 'config'): ?>
       <h2>Paso 1 — Configuracion de base de datos</h2>
       <p style="font-size: 0.85rem; color: #666; margin-bottom: 1.5rem;">
@@ -484,8 +462,6 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
         </div>
         <button type="submit" class="btn btn--primary">Guardar configuracion</button>
       </form>
-
-    <!-- ======== PASO 2: INSTALAR DB ======== -->
     <?php elseif ($step === 'install'): ?>
       <h2>Paso 2 — Instalar base de datos</h2>
 
@@ -535,9 +511,7 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
           <?php echo $dbExists ? 'Reinstalar base de datos' : 'Instalar base de datos'; ?>
         </button>
       </form>
-
-      <!-- Resultados de ejecucion si los hay -->
-      <?php if (!empty($results)): ?>
+<?php if (!empty($results)): ?>
         <div class="results">
           <?php foreach ($results as $r): ?>
             <div class="result-row <?php echo $r['success'] ? 'result-row--ok' : 'result-row--err'; ?>">
@@ -564,8 +538,6 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
           &larr; Cambiar configuracion
         </button>
       </form>
-
-    <!-- ======== PASO 3: LISTO ======== -->
     <?php elseif ($step === 'done'): ?>
       <h2>Instalacion completada</h2>
 
@@ -573,9 +545,7 @@ function executeSqlFile(PDO $pdo, string $filePath): array {
         La base de datos <strong><?php echo htmlspecialchars(DB_NAME); ?></strong> esta lista.
         Ya puedes usar el sitio.
       </p>
-
-      <!-- Resultados de ejecucion -->
-      <?php if (!empty($results)): ?>
+<?php if (!empty($results)): ?>
         <div class="results" style="margin-bottom: 1.5rem;">
           <?php foreach ($results as $r): ?>
             <div class="result-row <?php echo $r['success'] ? 'result-row--ok' : 'result-row--err'; ?>">

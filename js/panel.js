@@ -9,12 +9,9 @@
  */
 (function() {
   'use strict';
-
-  // ============================================================
   // NAVEGACIÓN ENTRE VISTAS
   // Cada opción del menú muestra su sección dentro del panel,
   // en lugar de abrirse como ventana superpuesta.
-  // ============================================================
   var topbarTitle    = document.querySelector('.topbar__title');
   var topbarSubtitle = document.querySelector('.topbar__subtitle');
   var tituloBase     = topbarTitle ? topbarTitle.textContent.trim() : '';
@@ -64,10 +61,7 @@
       showView(item.dataset.view);
     });
   });
-
-  // ============================================================
   // BARRA LATERAL (cajón en pantallas pequeñas)
-  // ============================================================
   var sidebar       = document.getElementById('adminSidebar');
   var sidebarToggle = document.getElementById('sidebarToggle');
   var sidebarClose  = document.getElementById('sidebarClose');

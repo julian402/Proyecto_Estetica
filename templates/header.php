@@ -38,8 +38,6 @@ $navLinks = [
   <link rel="stylesheet" href="css/styles.css?v=<?php echo filemtime(__DIR__ . '/../css/styles.css'); ?>">
 </head>
 <body<?php echo $bodyClass ? ' class="' . sanitize($bodyClass) . '"' : ''; ?>>
-
-  <!-- ========== HEADER / NAV ========== -->
   <header class="header" id="header">
     <div class="container header__inner">
       <a href="index.php" class="logo">
@@ -70,8 +68,6 @@ $navLinks = [
         <span></span>
       </button>
     </div>
-
-    <!-- Panel de navegacion movil -->
     <div class="mobile-nav" id="mobileNav">
       <ul class="mobile-nav__list">
         <?php foreach ($navLinks as $key => $link): ?>

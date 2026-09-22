@@ -146,10 +146,7 @@ function contingency_load_by_ids(PDO $db, array $ids): array {
     $stmt->execute($ids);
     return $stmt->fetchAll();
 }
-
-// ============================================================
 // GET: consultar citas afectadas por la ausencia
-// ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
     // Historial de acciones de contingencia, tomado del registro de auditoria
@@ -190,10 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         'esteticistas'       => $otrosEsteticistas,
     ]);
 }
-
-// ============================================================
 // POST: aplicar acciones de contingencia
-// ============================================================
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_input();
     $token = $input['csrf_token'] ?? '';
@@ -203,10 +197,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $action = $input['action'] ?? 'apply';
-
-    // --------------------------------------------------------
     // Reasignar un lote de citas a otro especialista
-    // --------------------------------------------------------
     if ($action === 'reassign_bulk') {
         $ids      = is_array($input['reserva_ids'] ?? null) ? $input['reserva_ids'] : [];
         $newEstId = (int) ($input['nuevo_esteticista_id'] ?? $input['id_esteticista'] ?? 0);
@@ -305,10 +296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'avisos'      => $avisos,
         ]);
     }
-
-    // --------------------------------------------------------
     // Cancelar un lote de citas
-    // --------------------------------------------------------
     if ($action === 'cancel_bulk') {
         $ids = is_array($input['reserva_ids'] ?? null) ? $input['reserva_ids'] : [];
 
@@ -374,10 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'canceladas' => count($canceladas),
         ]);
     }
-
-    // --------------------------------------------------------
     // Bloquear el dia completo de un especialista
-    // --------------------------------------------------------
     if ($action === 'block_day') {
         $esteticId = (int) ($input['id_esteticista'] ?? $input['esteticista_id'] ?? 0);
         [$inicio, $fin] = contingency_range($input);
@@ -423,10 +408,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             json_response(['error' => 'No se pudo bloquear el dia: ' . $e->getMessage()], 500);
         }
     }
-
-    // --------------------------------------------------------
     // Plan de contingencia completo: bloqueo del rango + reasignacion masiva
-    // --------------------------------------------------------
     $esteticId = (int) ($input['esteticista_id'] ?? $input['id_esteticista'] ?? 0);
     [$inicio, $fin] = contingency_range($input);
     $motivo    = trim($input['motivo'] ?? 'Ausencia inesperada de fuerza mayor');

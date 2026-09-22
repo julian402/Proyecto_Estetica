@@ -171,4 +171,3 @@ function login_session(int $userId): void {
 }
 
 require_once __DIR__ . '/audit.php';
-

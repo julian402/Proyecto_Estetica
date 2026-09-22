@@ -1,12 +1,7 @@
--- ============================================================
 -- Sistema de Gestion K-Beauty (Hanul Beauty)
 -- Script de base de datos MySQL (compatible con XAMPP)
 -- Basado en el DER/MER del proyecto (CodigoUML_DER.txt / MER.txt)
--- ============================================================
 -- Como ejecutar:
---   1. Abrir phpMyAdmin (XAMPP) o mysql CLI
---   2. Ejecutar este archivo completo (Importar > este .sql)
--- ============================================================
 
 DROP DATABASE IF EXISTS kbeauty_db;
 CREATE DATABASE kbeauty_db
@@ -17,18 +12,12 @@ USE kbeauty_db;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- ============================================================
--- 1. ROLES
--- ============================================================
 CREATE TABLE roles (
   id_rol      INT AUTO_INCREMENT PRIMARY KEY,
   nombre_rol  VARCHAR(50) NOT NULL UNIQUE
 ) ENGINE=InnoDB;
 
--- ============================================================
--- 2. USUARIOS (Cliente, Super Admin, Recepcionista, Esteticista
 --    conviven en la misma tabla, diferenciados por id_rol)
--- ============================================================
 CREATE TABLE usuarios (
   id_usuario     INT AUTO_INCREMENT PRIMARY KEY,
   id_rol         INT NOT NULL,
@@ -46,9 +35,6 @@ CREATE TABLE usuarios (
 
 CREATE INDEX idx_usuarios_rol ON usuarios(id_rol);
 
--- ============================================================
--- 3. CATALOGO K-BEAUTY (Categoria -> Subcategoria -> Servicio)
--- ============================================================
 CREATE TABLE categorias (
   id_categoria      INT AUTO_INCREMENT PRIMARY KEY,
   nombre_categoria  VARCHAR(100) NOT NULL UNIQUE
@@ -83,17 +69,11 @@ CREATE TABLE servicios (
 
 CREATE INDEX idx_servicios_subcategoria ON servicios(id_subcategoria);
 
--- ============================================================
--- 4. ESTADOS DE RESERVA
--- ============================================================
 CREATE TABLE estados_reserva (
   id_estado     INT AUTO_INCREMENT PRIMARY KEY,
   nombre_estado VARCHAR(50) NOT NULL UNIQUE
 ) ENGINE=InnoDB;
 
--- ============================================================
--- 5. RESERVAS
--- ============================================================
 CREATE TABLE reservas (
   id_reserva        INT AUTO_INCREMENT PRIMARY KEY,
   id_cliente        INT NOT NULL,
@@ -123,9 +103,6 @@ CREATE INDEX idx_reservas_esteticista_horario
 CREATE INDEX idx_reservas_cliente ON reservas(id_cliente);
 CREATE INDEX idx_reservas_estado ON reservas(id_estado);
 
--- ============================================================
--- 6. AUSENCIAS / BLOQUEOS DE AGENDA (esteticista)
--- ============================================================
 CREATE TABLE ausencias_bloqueos (
   id_bloqueo        INT AUTO_INCREMENT PRIMARY KEY,
   id_esteticista    INT NOT NULL,
@@ -141,9 +118,6 @@ CREATE TABLE ausencias_bloqueos (
 CREATE INDEX idx_ausencias_esteticista_horario
   ON ausencias_bloqueos(id_esteticista, fecha_hora_inicio, fecha_hora_fin);
 
--- ============================================================
--- 7. HISTORIAL DE ESTADOS (trazabilidad de cada reserva)
--- ============================================================
 CREATE TABLE historial_estados (
   id_historial        INT AUTO_INCREMENT PRIMARY KEY,
   id_reserva          INT NOT NULL,
@@ -168,9 +142,6 @@ CREATE TABLE historial_estados (
 
 CREATE INDEX idx_historial_reserva ON historial_estados(id_reserva);
 
--- ============================================================
--- 8. LOGS DE AUDITORIA (Super Admin)
--- ============================================================
 CREATE TABLE logs_auditoria (
   id_log         INT AUTO_INCREMENT PRIMARY KEY,
   id_usuario     INT NOT NULL,
@@ -188,9 +159,6 @@ CREATE TABLE logs_auditoria (
 CREATE INDEX idx_logs_usuario ON logs_auditoria(id_usuario);
 CREATE INDEX idx_logs_tabla ON logs_auditoria(tabla_afectada);
 
--- ============================================================
--- 9. LOGS DE CORREOS TRANSACCIONALES
--- ============================================================
 CREATE TABLE correos_log (
   id_correo    INT AUTO_INCREMENT PRIMARY KEY,
   destinatario VARCHAR(150) NOT NULL,
@@ -202,9 +170,6 @@ CREATE TABLE correos_log (
 
 CREATE INDEX idx_correos_destinatario ON correos_log(destinatario);
 
--- ============================================================
--- 10. FAVORITOS
--- ============================================================
 CREATE TABLE favoritos (
     id_favorito    INT AUTO_INCREMENT PRIMARY KEY,
     id_usuario     INT NOT NULL,
@@ -215,9 +180,6 @@ CREATE TABLE favoritos (
     FOREIGN KEY (id_servicio) REFERENCES servicios(id_servicio) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ============================================================
--- 11. DATOS SEMILLA (seed data)
--- ============================================================
 INSERT INTO roles (nombre_rol) VALUES
   ('Cliente'), ('SuperAdmin'), ('Recepcionista'), ('Esteticista');
 
@@ -260,9 +222,6 @@ INSERT INTO usuarios (id_rol, nombre, correo, password_hash, telefono, es_invita
   (4, 'Juan D.',           'juan@hanulbeauty.co',      '$2y$10$O1WQ/YHL8sWSOE0QIsxbKeOhQuoaSwiTgdG8hAL2Q9FA/NYsIAb4e', '3000000004', FALSE, TRUE),
   (1, 'Cliente de Prueba', 'cliente@ejemplo.com',      '$2y$10$oTLRrHF7.Kr0OFdJQNx0veqaZyx8F4XRS0H1jt8rGInP9drdxLG/6', '3001234567', FALSE, TRUE);
 
--- ============================================================
--- 12. TRIGGERS - Validacion de doble agendamiento
--- ============================================================
 DELIMITER $$
 
 CREATE TRIGGER trg_reservas_before_insert
@@ -373,9 +332,6 @@ END$$
 
 DELIMITER ;
 
--- ============================================================
--- 11. VISTA: agenda del dia por esteticista
--- ============================================================
 CREATE OR REPLACE VIEW vw_agenda_dia AS
 SELECT
   r.id_reserva,
@@ -391,7 +347,3 @@ JOIN usuarios u ON u.id_usuario = r.id_esteticista
 JOIN usuarios c ON c.id_usuario = r.id_cliente
 JOIN servicios s ON s.id_servicio = r.id_servicio
 JOIN estados_reserva e ON e.id_estado = r.id_estado;
-
--- ============================================================
--- FIN DEL SCRIPT
--- ============================================================

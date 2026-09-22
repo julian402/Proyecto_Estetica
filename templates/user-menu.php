@@ -26,9 +26,7 @@ $destino    = $esPersonal ? 'dashboard.php' : 'cuenta.php';
               <button class="user-menu__item" data-open-modal="loginModal">Iniciar sesion</button>
               <button class="user-menu__item" data-open-modal="registerModal">Registrarse</button>
             </div>
-
-            <!-- Tras iniciar sesion sin recargar, este bloque sustituye al de invitado -->
-            <div class="user-menu__logged" id="userMenuLogged" <?php if (!is_logged_in()): ?>style="display:none"<?php endif; ?>>
+<div class="user-menu__logged" id="userMenuLogged" <?php if (!is_logged_in()): ?>style="display:none"<?php endif; ?>>
               <?php if (is_logged_in() && $currentUser): ?>
                 <span class="user-menu__name"><?php echo sanitize($currentUser['nombre']); ?></span>
                 <div class="user-menu__divider"></div>

@@ -38,8 +38,6 @@ $reserva = Appointment::findById($reservaId);
 if (!$reserva) {
     json_response(['error' => 'No se encontro la reserva solicitada'], 404);
 }
-
-// Tarea 14: Control de permisos. Esteticistas (4) no pueden cancelar citas
 if ($rol === 4 && $nuevoEstado === 4) {
     json_response(['error' => 'Los esteticistas no tienen permisos para cancelar citas'], 403);
 }
@@ -61,8 +59,6 @@ try {
 if (!$updated) {
     json_response(['error' => 'No se encontro la reserva o ya se encontraba en ese estado'], 404);
 }
-
-// Tarea 7: Despachar correo de cambio de estado
 if ($oldStatus !== $nuevoEstado) {
     try {
         $appointmentData = [

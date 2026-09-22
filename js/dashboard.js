@@ -18,10 +18,7 @@
   // Pila Undo / Redo (Tarea 3)
   var undoStack = [];
   var redoStack = [];
-
-  // ============================================================
   // UTILIDADES
-  // ============================================================
   function escHtml(str) {
     if (str === null || str === undefined) return '';
     var div = document.createElement('div');
@@ -63,15 +60,11 @@
     toast.querySelector('.toast__close').addEventListener('click', dismiss);
     setTimeout(dismiss, 4500);
   }
-
-  // ============================================================
   // NAVEGACIÓN Y BARRA LATERAL
   // La logica vive en js/panel.js, compartida con el area de cliente.
-  // ============================================================
   var showView = window.PanelUI.showView;
 
   // TAREA 16: MODO OSCURO (DARK MODE)
-  // ============================================================
   var themeToggleBtn  = document.getElementById('themeToggleBtn');
   var themeToggleText = document.getElementById('themeToggleText');
 
@@ -108,10 +101,7 @@
       showToast(newTheme === 'dark' ? 'Modo Oscuro activado' : 'Modo Claro activado', 'info');
     });
   }
-
-  // ============================================================
   // GESTIÓN DE MODALES
-  // ============================================================
   function openModal(modalId) {
     var modal = document.getElementById(modalId);
     if (modal) {
@@ -146,10 +136,7 @@
       if (openM) closeModal(openM);
     }
   });
-
-  // ============================================================
   // CARGA Y FILTRADO DE RESERVAS (Tareas 18, 8 y 23)
-  // ============================================================
   function updateCounters(stats) {
     if (!stats) return;
     var total = 0;
@@ -230,8 +217,6 @@
           selectHtml += '</select>';
 
           var telInfo = r.telefono_cliente ? '<br><small class="cell-muted">📞 ' + escHtml(r.telefono_cliente) + '</small>' : '';
-
-          // Tarea 23: Botón para reprogramar cita en cada fila activa
           var canReschedule = (estadoId === 1 || estadoId === 2 || estadoId === 5);
           var reprogBtn = canReschedule ?
             '<button type="button" class="btn btn--outline btn--xs btn-reprogramar" ' +
@@ -297,10 +282,7 @@
         tbody.innerHTML = '<tr><td colspan="9" class="dashboard__empty">Error de conexión al cargar reservas</td></tr>';
       });
   }
-
-  // ============================================================
   // PILA DESHACER / REHACER (UNDO / REDO) - TAREA 3
-  // ============================================================
   var btnUndo = document.getElementById('btnUndo');
   var btnRedo = document.getElementById('btnRedo');
 
@@ -373,10 +355,7 @@
       });
     });
   }
-
-  // ============================================================
   // FILTROS DE LA TABLA
-  // ============================================================
   var filterFecha = document.getElementById('filterFecha');
   var filterEstado = document.getElementById('filterEstado');
   var filterServicio = document.getElementById('filterServicio');
@@ -402,10 +381,6 @@
       showToast('Filtros restablecidos', 'info');
     });
   }
-
-  // ============================================================
-  // MODAL: REPROGRAMAR CITA (TAREA 23)
-  // ============================================================
   var modalReprog       = document.getElementById('modalReprogramar');
   var formReprog        = document.getElementById('formReprogramar');
   var reprogReservaId   = document.getElementById('reprogReservaId');
@@ -535,10 +510,6 @@
       });
     });
   }
-
-  // ============================================================
-  // MODAL: NUEVA CITA TELEFÓNICA (RECEPCIÓN)
-  // ============================================================
   var btnOpenNuevaCita = document.getElementById('btnOpenNuevaCita');
   var formNuevaCita    = document.getElementById('formNuevaCita');
   var ncServicio       = document.getElementById('ncServicio');
@@ -647,10 +618,6 @@
       });
     });
   }
-
-  // ============================================================
-  // MODAL: BLOQUEO DE AGENDA / DESCANSOS
-  // ============================================================
   var btnOpenBloqueo     = document.getElementById('btnOpenBloqueo');
   var formBloqueo        = document.getElementById('formBloqueo');
   var tablaBloqueosBody  = document.getElementById('tablaBloqueosBody');
@@ -766,10 +733,6 @@
       });
     });
   }
-
-  // ============================================================
-  // MODAL: CONTINGENCIA DE ESPECIALISTA
-  // ============================================================
   var btnOpenContingencia        = document.getElementById('btnOpenContingencia');
   var btnConsultarContingencia   = document.getElementById('btnConsultarContingencia');
   var contResultados             = document.getElementById('contResultados');
@@ -1033,10 +996,6 @@
       }
     });
   }
-
-  // ============================================================
-  // MODAL: GESTIÓN DE SERVICIOS
-  // ============================================================
   var btnOpenServicios    = document.getElementById('btnOpenServicios');
   var formServicioCrud    = document.getElementById('formServicioCrud');
   var tablaServiciosBody  = document.getElementById('tablaServiciosBody');
@@ -1155,10 +1114,6 @@
       });
     });
   }
-
-  // ============================================================
-  // MODAL: GESTIÓN DE PERSONAL
-  // ============================================================
   var btnOpenPersonal     = document.getElementById('btnOpenPersonal');
   var formPersonalCrud    = document.getElementById('formPersonalCrud');
   var tablaPersonalBody   = document.getElementById('tablaPersonalBody');
@@ -1292,10 +1247,6 @@
       });
     });
   }
-
-  // ============================================================
-  // MODAL: LOGS DE AUDITORÍA (SUPERADMIN)
-  // ============================================================
   var btnOpenLogs    = document.getElementById('btnOpenLogs');
   var tablaLogsBody  = document.getElementById('tablaLogsBody');
 
@@ -1335,10 +1286,6 @@
       loadAuditLogs();
     });
   }
-
-  // ============================================================
-  // MODAL: CORREOS ENVIADOS
-  // ============================================================
   var btnOpenCorreos    = document.getElementById('btnOpenCorreos');
   var tablaCorreosBody  = document.getElementById('tablaCorreosBody');
   var correoPreview     = document.getElementById('correoPreview');
@@ -1422,10 +1369,6 @@
       if (correoPreviewFrm) correoPreviewFrm.srcdoc = '';
     });
   }
-
-  // ============================================================
-  // MODAL: GENERAR INFORME IMPRIMIBLE
-  // ============================================================
   var btnOpenReporte       = document.getElementById('btnOpenReporte');
   var btnRecalcularReporte = document.getElementById('btnRecalcularReporte');
   var btnImprimirReporte   = document.getElementById('btnImprimirReporte');
@@ -1544,15 +1487,11 @@
   if (btnRecalcularReporte) {
     btnRecalcularReporte.addEventListener('click', fetchReportData);
   }
-
-  // Tarea 3: Impresión limpia
   if (btnImprimirReporte) {
     btnImprimirReporte.addEventListener('click', function() {
       window.print();
     });
   }
-
-  // Cierre de sesión
   var logoutBtn = document.getElementById('dashLogoutBtn');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', function() {

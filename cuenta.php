@@ -66,8 +66,6 @@ function cuenta_icon(string $name): string {
   <div class="admin-overlay" id="adminOverlay"></div>
 
   <div class="admin-shell">
-
-    <!-- ==================== BARRA LATERAL ==================== -->
     <aside class="sidebar" id="adminSidebar">
       <div class="sidebar__brand">
         <a href="index.php" class="sidebar__logo">
@@ -124,8 +122,6 @@ function cuenta_icon(string $name): string {
         </div>
       </div>
     </aside>
-
-    <!-- ==================== CONTENIDO ==================== -->
     <div class="admin-main">
 
       <header class="topbar">
@@ -141,8 +137,6 @@ function cuenta_icon(string $name): string {
       </header>
 
       <main class="dashboard">
-
-        <!-- ---------- Mis citas ---------- -->
         <section class="view" id="viewCitas"
                  data-view-title="Mis citas"
                  data-view-subtitle="Consulta, reprograma o cancela tus reservas"
@@ -157,8 +151,6 @@ function cuenta_icon(string $name): string {
             </div>
           </div>
         </section>
-
-        <!-- ---------- Mi perfil ---------- -->
         <section class="view" id="viewPerfil"
                  data-view-title="Mi perfil"
                  data-view-subtitle="Tus datos personales y preferencias de cuenta"
@@ -204,8 +196,6 @@ function cuenta_icon(string $name): string {
             </form>
           </div>
         </section>
-
-        <!-- ---------- Favoritos ---------- -->
         <section class="view" id="viewFavoritos"
                  data-view-title="Tratamientos favoritos"
                  data-view-subtitle="Tus tratamientos guardados para agendar con un clic"
@@ -224,12 +214,8 @@ function cuenta_icon(string $name): string {
       </main>
     </div>
   </div>
-
-  <!-- Reprogramar sigue siendo una ventana: se abre desde una cita concreta -->
-  <?php require __DIR__ . '/templates/modal-reschedule.php'; ?>
-
-  <!-- Toast container -->
-  <div class="toast-container" id="toastContainer"></div>
+<?php require __DIR__ . '/templates/modal-reschedule.php'; ?>
+<div class="toast-container" id="toastContainer"></div>
 
   <input type="hidden" name="csrf_token" value="<?php echo csrf_token(); ?>">
 

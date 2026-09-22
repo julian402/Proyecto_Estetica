@@ -16,8 +16,6 @@ require_login();
 
 $user = current_user();
 $rol = (int) ($user['id_rol'] ?? 0);
-
-// Tarea 14: Esteticistas estan estrictamente bloqueados
 if ($rol === 4) {
     json_response(['error' => 'Los esteticistas no tienen permisos para reprogramar citas'], 403);
 }
@@ -98,8 +96,6 @@ try {
     error_log('Error reprogramando cita: ' . $e->getMessage());
     json_response(['error' => 'No fue posible reprogramar la cita. Verifica la disponibilidad del horario.'], 409);
 }
-
-// Tarea 24: Despachar correo de reprogramacion
 try {
     $appointmentData = [
         'id_reserva'      => $reservaId,

@@ -22,13 +22,9 @@ $filterDate        = $_GET['fecha'] ?? null;
 $filterEstado      = !empty($_GET['estado']) ? (int) $_GET['estado'] : null;
 $filterEsteticista = !empty($_GET['esteticista']) ? (int) $_GET['esteticista'] : null;
 $filterServicio    = !empty($_GET['servicio']) ? (int) $_GET['servicio'] : (!empty($_GET['servicio_id']) ? (int) $_GET['servicio_id'] : null);
-
-// Tarea 8: Si rol es Esteticista (4), FORZAR filtro por su propio id_usuario
 if ($rol === 4) {
     $filterEsteticista = (int) $user['id_usuario'];
 }
-
-// Tarea 18: Soporte de filtro por servicio
 $reservas = Appointment::getAll($filterDate, $filterEstado, $filterEsteticista, $filterServicio);
 $stats    = Appointment::countByStatus();
 

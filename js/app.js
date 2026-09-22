@@ -4,13 +4,9 @@
 
 (function() {
   'use strict';
-
-  // ---- Estado global ----
   var csrfToken = document.querySelector('input[name="csrf_token"]')
     ? document.querySelector('input[name="csrf_token"]').value
     : '';
-
-  // ---- Toast notifications ----
   function ensureToastContainer() {
     var c = document.getElementById('toastContainer');
     if (!c) {
@@ -50,8 +46,6 @@
     toast.querySelector('.toast__close').addEventListener('click', dismiss);
     setTimeout(dismiss, 4500);
   }
-
-  // ---- Indicador de navegacion activa ----
   (function() {
     var links = document.querySelectorAll('.nav__link');
     var page = window.location.pathname.split('/').pop() || 'index.php';
@@ -71,8 +65,6 @@
     updateActiveLink();
     window.addEventListener('hashchange', updateActiveLink);
   })();
-
-  // ---- Carousel 3D ----
   (function() {
     var carousel = document.getElementById('heroCarousel');
     if (!carousel) return;
@@ -120,8 +112,6 @@
       }
     });
   })();
-
-  // ---- Stepper progression helper ----
   function setStepperStep(stepNum) {
     var steps = document.querySelectorAll('.stepper__step');
     steps.forEach(function(step) {
@@ -135,8 +125,6 @@
       }
     });
   }
-
-  // ---- Summary update (Tratamiento, Especialista, Fecha/Hora, Valor) ----
   function updateBookingSummary() {
     var select = document.getElementById('tratamiento');
     if (!select) return;
@@ -192,8 +180,6 @@
       }
     }
   }
-
-  // ---- Specialist Pills (debajo de tratamiento) ----
   (function() {
     var pills = document.querySelectorAll('.specialist-pill');
     pills.forEach(function(pill) {
@@ -213,8 +199,6 @@
     var checked = document.querySelector('.specialist-pill input:checked');
     if (checked) checked.closest('.specialist-pill').classList.add('specialist-pill--active');
   })();
-
-  // ---- Treatment select -> booking summary update & stepper events ----
   (function() {
     var select = document.getElementById('tratamiento');
     if (select) {
@@ -267,8 +251,6 @@
     if (g2) g2.addEventListener('focusin', function() { setStepperStep(2); });
     if (g3) g3.addEventListener('focusin', function() { setStepperStep(3); });
   })();
-
-  // ---- Filter tabs (tratamientos) ----
   (function() {
     var tabs = document.querySelectorAll('.filter-tab');
     var cards = document.querySelectorAll('.treatment-card');
@@ -294,8 +276,6 @@
       });
     });
   })();
-
-  // ---- Carrusel de tratamientos ----
   // Avanza de pagina en pagina (3 tarjetas en escritorio, 2 en tablet, 1 en movil).
   // Usa scroll nativo con scroll-snap, asi el gesto tactil funciona sin codigo extra.
   (function() {
@@ -492,8 +472,6 @@
 
     buildDots();
   })();
-
-  // ---- Menu movil (hamburguesa) ----
   (function() {
     var toggle = document.getElementById('navToggle');
     var panel  = document.getElementById('mobileNav');
@@ -542,8 +520,6 @@
       if (window.innerWidth > 768) closeMenu();
     });
   })();
-
-  // ---- User Menu & Modals ----
   (function() {
     var toggle = document.getElementById('userMenuToggle');
     var dropdown = document.getElementById('userMenuDropdown');
@@ -608,8 +584,6 @@
     window.openModal = openModal;
     window.closeModal = closeModal;
   })();
-
-  // ---- Alternar UI guest/logged ----
   var ADMIN_ROLES = [2, 3, 4];
 
   function autofillBookingForm(user) {
@@ -756,8 +730,6 @@
       el.style.display = 'block';
     }
   }
-
-  // ---- Login ----
   (function() {
     var form = document.getElementById('loginForm');
     if (!form) return;
@@ -802,8 +774,6 @@
       });
     });
   })();
-
-  // ---- Register (Tarea 21: Contraseña mínimo 8 caracteres) ----
   (function() {
     var form = document.getElementById('registerForm');
     if (!form) return;
@@ -875,8 +845,6 @@
       });
     });
   })();
-
-  // ---- Logout ----
   (function() {
     var btn = document.getElementById('logoutBtn');
     if (!btn) return;
@@ -898,8 +866,6 @@
       });
     });
   })();
-
-  // ---- Booking (crear reserva) ----
   var lastBookingInfo = null;
 
   (function() {
@@ -921,8 +887,6 @@
       var checked = document.querySelector('input[name="esteticista_id"]:checked');
       return checked ? parseInt(checked.value) : 0;
     }
-
-    // ---- Cargar horarios disponibles ----
     var loadingSlots = false;
     function loadAvailableSlots() {
       if (!fechaInput || !fechaInput.value || !selectServ || !horaSelect) return;
@@ -969,9 +933,6 @@
           if (typeof updateBookingSummary === 'function') updateBookingSummary();
         });
     }
-
-
-    // ---- Restablecer el formulario tras agendar ----
     // Limpia tratamiento, especialista, fecha y hora. Los datos de contacto se
     // conservan si hay sesión iniciada (vienen prellenados desde el servidor).
     function resetBookingForm() {
@@ -1046,8 +1007,6 @@
 
     loadAvailableSlots();
     if (typeof updateBookingSummary === 'function') updateBookingSummary();
-
-    // ---- Enviar reserva con validación estricta y manejo de conflictos ----
     confirmBtn.addEventListener('click', function() {
       var nombreEl   = document.getElementById('bookNombre');
       var correoEl   = document.getElementById('bookCorreo');
@@ -1060,16 +1019,12 @@
       var esteticistaId = getSelectedEsteticista();
       var fecha = fechaInput ? fechaInput.value.trim() : '';
       var hora = horaSelect ? horaSelect.value.trim() : '';
-
-      // Tarea 22: Validación de Tratamiento
       if (!servicioId || isNaN(servicioId) || servicioId <= 0) {
         showToast('Por favor selecciona un tratamiento para tu cita.', 'warning');
         if (selectServ) selectServ.focus();
         if (typeof setStepperStep === 'function') setStepperStep(1);
         return;
       }
-
-      // Tarea 22: Validación de Fecha
       if (!fecha) {
         showToast('Por favor selecciona la fecha de tu cita.', 'warning');
         if (fechaInput) fechaInput.focus();
@@ -1083,16 +1038,12 @@
         if (typeof setStepperStep === 'function') setStepperStep(2);
         return;
       }
-
-      // Tarea 22: Validación de Hora
       if (!hora || hora.indexOf('Sin horarios') !== -1 || hora.indexOf('Cargando') !== -1 || hora.indexOf('Selecciona') !== -1) {
         showToast('Por favor selecciona una hora disponible para tu cita.', 'warning');
         if (horaSelect) horaSelect.focus();
         if (typeof setStepperStep === 'function') setStepperStep(2);
         return;
       }
-
-      // Tarea 22: Validación de Nombre
       if (!nombre) {
         showToast('Por favor ingresa tu nombre completo.', 'warning');
         if (nombreEl) nombreEl.focus();
@@ -1105,8 +1056,6 @@
         if (typeof setStepperStep === 'function') setStepperStep(3);
         return;
       }
-
-      // Tarea 19 & Tarea 22: Validación de Teléfono obligatorio
       if (!telefono) {
         showToast('Por favor ingresa tu número de teléfono de contacto.', 'warning');
         if (telefonoEl) telefonoEl.focus();
@@ -1120,8 +1069,6 @@
         if (typeof setStepperStep === 'function') setStepperStep(3);
         return;
       }
-
-      // Tarea 22: Validación de Correo
       if (!correo) {
         showToast('Por favor ingresa tu correo electrónico.', 'warning');
         if (correoEl) correoEl.focus();
@@ -1226,8 +1173,6 @@
       });
     });
   })();
-
-  // ---- Actualizar todos los tokens CSRF en el DOM ----
   function updateAllCsrfTokens(token) {
     document.querySelectorAll('input[name="csrf_token"]').forEach(function(input) {
       input.value = token;
@@ -1239,8 +1184,6 @@
     d.textContent = str || '';
     return d.innerHTML;
   }
-
-  // ---- Mis citas (Tarea 17: Experiencia visual moderna K-Beauty, Reprogramar y Cancelar) ----
   (function() {
     var btn = document.getElementById('openCitasBtn');
     if (!btn) return;
@@ -1368,8 +1311,6 @@
 
     window.loadCitas = loadCitas;
   })();
-
-  // ---- Modal Reprogramar Cita (Cliente) ----
   var currentRescheduleAppointment = null;
 
   function openRescheduleModal(apt) {
@@ -1530,8 +1471,6 @@
       });
     });
   })();
-
-  // ---- Modal Completar Cuenta (Guest a Cliente) ----
   function openCompleteAccountModal(info) {
     var modal = document.getElementById('completeAccountModal');
     if (!modal) return;
@@ -1556,8 +1495,6 @@
       window.openModal('completeAccountModal');
     }
   }
-
-  // ---- Apertura desde el correo: index.php?completar=1&email=... ----
   (function() {
     var params = new URLSearchParams(window.location.search);
     if (params.get('completar') !== '1') return;
@@ -1601,7 +1538,6 @@
         showError('completeAccountError', 'Por favor ingresa un número de teléfono válido (mínimo 7 dígitos)');
         return;
       }
-      // Tarea 21: Mínimo 8 caracteres
       if (password.length < 8) {
         showError('completeAccountError', 'La contraseña debe tener al menos 8 caracteres');
         showToast('La contraseña debe tener al menos 8 caracteres', 'error');
@@ -1685,8 +1621,6 @@
       });
     });
   })();
-
-  // ---- Mi perfil (Tarea 17: Visualización y Tarea 21: Contraseña mín 8 chars) ----
   (function() {
     var btn = document.getElementById('openPerfilBtn');
     var form = document.getElementById('perfilForm');
@@ -1712,8 +1646,6 @@
 
       var currentPassword = document.getElementById('perfilPassActual').value;
       var newPassword = document.getElementById('perfilPassNueva').value;
-
-      // Tarea 21: Mínimo 8 caracteres en contraseña nueva si se proporciona
       if (newPassword !== '') {
         if (newPassword.length < 8) {
           showError('perfilError', 'La nueva contraseña debe tener al menos 8 caracteres');
@@ -1760,8 +1692,6 @@
       });
     });
   })();
-
-  // ---- Autofill inicial si el usuario ya tiene sesión activa ----
   (function initSessionAutofill() {
     var logged = document.getElementById('userMenuLogged');
     if (logged && logged.style.display !== 'none') {
@@ -1776,8 +1706,6 @@
         .catch(function() {});
     }
   })();
-
-  // ---- Favoritos ----
   (function() {
     // El listado solo existe en el area de cliente, pero el corazon de las
     // tarjetas esta en el sitio publico: toggleFav se define siempre.
@@ -1840,8 +1768,6 @@
     window.toggleFav = toggleFav;
     window.loadFavoritos = loadFavoritos;
   })();
-
-  // ---- Botones de favorito en tarjetas de tratamientos ----
   function updateFavButtons() {
     fetch('api/favorites/list.php')
       .then(function(r) { return r.json(); })

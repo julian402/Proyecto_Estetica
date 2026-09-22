@@ -1,4 +1,3 @@
-  <!-- ========== HERO ========== -->
   <section class="hero">
     <div class="container hero__inner">
       <div class="hero__content">
@@ -32,8 +31,7 @@
       </div>
       <div class="hero__carousel">
         <div class="carousel-3d" id="heroCarousel">
-          <!-- Card 1 -->
-          <div class="carousel-3d__card">
+<div class="carousel-3d__card">
             <div class="carousel-3d__img carousel-3d__img--1"></div>
             <div class="carousel-3d__body">
               <span class="carousel-3d__badge">FACIAL</span>
@@ -41,8 +39,7 @@
               <p class="carousel-3d__meta">75 min · $180.000</p>
             </div>
           </div>
-          <!-- Card 2 -->
-          <div class="carousel-3d__card">
+<div class="carousel-3d__card">
             <div class="carousel-3d__img carousel-3d__img--2"></div>
             <div class="carousel-3d__body">
               <span class="carousel-3d__badge">FACIAL</span>
@@ -50,8 +47,7 @@
               <p class="carousel-3d__meta">60 min · $140.000</p>
             </div>
           </div>
-          <!-- Card 3 -->
-          <div class="carousel-3d__card">
+<div class="carousel-3d__card">
             <div class="carousel-3d__img carousel-3d__img--3"></div>
             <div class="carousel-3d__body">
               <span class="carousel-3d__badge">CORPORAL</span>
@@ -59,8 +55,7 @@
               <p class="carousel-3d__meta">60 min · $150.000</p>
             </div>
           </div>
-          <!-- Card 4 -->
-          <div class="carousel-3d__card">
+<div class="carousel-3d__card">
             <div class="carousel-3d__img carousel-3d__img--4"></div>
             <div class="carousel-3d__body">
               <span class="carousel-3d__badge">FACIAL</span>
@@ -68,8 +63,7 @@
               <p class="carousel-3d__meta">50 min · $120.000</p>
             </div>
           </div>
-          <!-- Card 5 -->
-          <div class="carousel-3d__card">
+<div class="carousel-3d__card">
             <div class="carousel-3d__img carousel-3d__img--5"></div>
             <div class="carousel-3d__body">
               <span class="carousel-3d__badge">CORPORAL</span>
