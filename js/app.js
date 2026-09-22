@@ -671,6 +671,35 @@
     if (guest) guest.style.display = 'none';
     if (logged) logged.style.display = '';
 
+    var isPersonal = user && ADMIN_ROLES.indexOf(user.role) !== -1;
+    var destination = isPersonal ? 'dashboard.php' : 'cuenta.php';
+    var destinationLabel = isPersonal ? 'Panel de Reservas' : 'Mi cuenta';
+
+    // La cabecera se renderiza inicialmente para invitado. Al iniciar sesion
+    // por AJAX se reemplaza ese boton por el acceso del usuario sin recargar.
+    var toggle = document.getElementById('userMenuToggle');
+    if (toggle && user && user.name) {
+      var userLink = document.createElement('a');
+      userLink.id = 'userMenuLink';
+      userLink.className = 'user-menu__toggle user-menu__toggle--link';
+      userLink.href = destination;
+      userLink.title = destinationLabel;
+      userLink.setAttribute('aria-label', destinationLabel);
+
+      var avatar = document.createElement('span');
+      avatar.className = 'user-menu__avatar';
+      avatar.setAttribute('aria-hidden', 'true');
+      avatar.textContent = Array.from(user.name.trim())[0].toUpperCase();
+
+      var label = document.createElement('span');
+      label.className = 'user-menu__label';
+      label.textContent = user.name.trim().split(/\s+/)[0];
+
+      userLink.appendChild(avatar);
+      userLink.appendChild(label);
+      toggle.replaceWith(userLink);
+    }
+
     var nameEl = logged ? logged.querySelector('.user-menu__name') : null;
     if (nameEl && user && user.name) {
       nameEl.textContent = user.name;
@@ -685,16 +714,16 @@
       logged.insertBefore(span, logged.firstChild);
     }
 
-    // Dashboard link for admin roles
-    if (logged && user && ADMIN_ROLES.indexOf(user.role) !== -1) {
-      if (!logged.querySelector('.user-menu__dashboard-link')) {
+    // Acceso al area correspondiente al usuario.
+    if (logged && user) {
+      if (!logged.querySelector('.user-menu__account-link')) {
         var link = document.createElement('a');
-        link.href = 'dashboard.php';
-        link.className = 'user-menu__item user-menu__dashboard-link';
+        link.href = destination;
+        link.className = 'user-menu__item user-menu__account-link';
         link.style.cssText = 'text-decoration:none; display:block;';
-        link.textContent = 'Panel de Reservas';
+        link.textContent = destinationLabel;
         var div = document.createElement('div');
-        div.className = 'user-menu__divider user-menu__dashboard-divider';
+        div.className = 'user-menu__divider user-menu__account-divider';
         var firstItem = logged.querySelector('.user-menu__item');
         if (firstItem) {
           logged.insertBefore(div, firstItem);
@@ -714,10 +743,10 @@
     if (guest) guest.style.display = '';
     if (logged) logged.style.display = 'none';
 
-    var dashLink = logged ? logged.querySelector('.user-menu__dashboard-link') : null;
-    var dashDiv = logged ? logged.querySelector('.user-menu__dashboard-divider') : null;
-    if (dashLink) dashLink.remove();
-    if (dashDiv) dashDiv.remove();
+    var accountLink = logged ? logged.querySelector('.user-menu__account-link') : null;
+    var accountDiv = logged ? logged.querySelector('.user-menu__account-divider') : null;
+    if (accountLink) accountLink.remove();
+    if (accountDiv) accountDiv.remove();
   }
 
   function showError(elementId, message) {
