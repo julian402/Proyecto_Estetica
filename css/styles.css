@@ -3077,12 +3077,18 @@ a.sidebar__item {
   overflow: hidden;
 }
 
+.modal__content.correo-preview {
+  max-width: 720px;
+  margin: 0;
+  padding: 0;
+}
+
 .correo-preview__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 14px 54px 14px 18px;
   background-color: var(--color-bg-section);
   font-size: 0.85rem;
 }

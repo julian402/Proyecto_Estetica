@@ -712,13 +712,6 @@ function strftime_es(): string {
               </table>
             </div>
 
-            <div id="correoPreview" class="correo-preview" style="display:none;">
-              <div class="correo-preview__head">
-                <strong id="correoPreviewAsunto"></strong>
-                <button type="button" class="btn btn--outline btn--xs" id="btnCerrarPreview">Cerrar vista previa</button>
-              </div>
-              <iframe id="correoPreviewFrame" title="Vista previa del correo"></iframe>
-            </div>
           </div>
         </section>
 
@@ -822,6 +815,16 @@ function strftime_es(): string {
       </main>
     </div>
   </div>
+<div class="modal" id="modalCorreoPreview" role="dialog" aria-modal="true" aria-labelledby="correoPreviewAsunto">
+  <div class="modal__content correo-preview">
+    <button class="modal__close" data-close-modal aria-label="Cerrar vista previa">&times;</button>
+    <div class="correo-preview__head">
+      <strong id="correoPreviewAsunto"></strong>
+    </div>
+    <iframe id="correoPreviewFrame" title="Vista previa del correo"></iframe>
+  </div>
+</div>
+
 <div class="modal" id="modalReprogramar" role="dialog" aria-modal="true" aria-labelledby="modalReprogTitle">
     <div class="modal__content">
       <button class="modal__close" data-close-modal aria-label="Cerrar">&times;</button>

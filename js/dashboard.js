@@ -1288,10 +1288,9 @@
   }
   var btnOpenCorreos    = document.getElementById('btnOpenCorreos');
   var tablaCorreosBody  = document.getElementById('tablaCorreosBody');
-  var correoPreview     = document.getElementById('correoPreview');
+  var correoPreview     = document.getElementById('modalCorreoPreview');
   var correoPreviewFrm  = document.getElementById('correoPreviewFrame');
   var correoPreviewAsun = document.getElementById('correoPreviewAsunto');
-  var btnCerrarPreview  = document.getElementById('btnCerrarPreview');
   var correosTransporte = document.getElementById('correosTransporte');
 
   function loadCorreos() {
@@ -1346,7 +1345,10 @@
                 }
                 if (correoPreviewAsun) correoPreviewAsun.textContent = res.correo.asunto;
                 if (correoPreviewFrm) correoPreviewFrm.srcdoc = res.correo.cuerpo_html;
-                if (correoPreview) correoPreview.style.display = 'block';
+                if (correoPreview) correoPreview.classList.add('modal--open');
+              })
+              .catch(function() {
+                showToast('No se pudo cargar el correo', 'error');
               });
           });
         });
@@ -1358,15 +1360,8 @@
 
   if (btnOpenCorreos) {
     btnOpenCorreos.addEventListener('click', function() {
-      if (correoPreview) correoPreview.style.display = 'none';
+      if (correoPreview) correoPreview.classList.remove('modal--open');
       loadCorreos();
-    });
-  }
-
-  if (btnCerrarPreview) {
-    btnCerrarPreview.addEventListener('click', function() {
-      if (correoPreview) correoPreview.style.display = 'none';
-      if (correoPreviewFrm) correoPreviewFrm.srcdoc = '';
     });
   }
   var btnOpenReporte       = document.getElementById('btnOpenReporte');
