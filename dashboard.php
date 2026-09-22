@@ -300,6 +300,8 @@ function strftime_es(): string {
           </div>
         </section>
 
+        </section>
+
         <section class="view" id="viewNuevaCita" data-view-subtitle="Registra una cita recibida por teléfono" data-view-title="Agendar cita" hidden aria-labelledby="modalNuevaTitle">
           <div class="panel panel--view">
             <h2 class="modal__title" id="modalNuevaTitle">📞 Agendar Cita Telefónica (Recepción)</h2>
