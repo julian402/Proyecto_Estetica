@@ -58,40 +58,41 @@ funciona sin un sendmail configurado. Para revisar lo que se habria enviado:
 
 ### Envio real por SMTP
 
-1. Copiar la plantilla de configuracion:
+1. Copiar la plantilla de variables de entorno:
    ```bash
-   cp config/mail.php.example config/mail.php
+   copy .env.example .env
    ```
 
-2. En `config/mail.php`, poner `MAIL_TRANSPORT` en `'smtp'` y completar el resto.
+2. En `.env`, poner `MAIL_TRANSPORT=smtp` y completar el resto.
 
 **Mailtrap** (recomendado para pruebas: captura los correos en una bandeja de
 prueba, sin entregarlos a buzones reales):
 
-```php
-define('MAIL_TRANSPORT', 'smtp');
-define('MAIL_HOST', 'sandbox.smtp.mailtrap.io');
-define('MAIL_PORT', 2525);
-define('MAIL_SECURE', 'tls');
-define('MAIL_USER', 'tu-usuario-de-mailtrap');
-define('MAIL_PASS', 'tu-password-de-mailtrap');
+```env
+MAIL_TRANSPORT=smtp
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_SECURE=tls
+MAIL_USER=tu-usuario-de-mailtrap
+MAIL_PASS=tu-password-de-mailtrap
 ```
 
 **Gmail** (entrega real). Requiere verificacion en dos pasos activa y una
 [contrasena de aplicacion](https://myaccount.google.com/apppasswords); la
 contrasena normal de la cuenta **no** funciona:
 
-```php
-define('MAIL_TRANSPORT', 'smtp');
-define('MAIL_HOST', 'smtp.gmail.com');
-define('MAIL_PORT', 587);
-define('MAIL_SECURE', 'tls');
-define('MAIL_USER', 'tucorreo@gmail.com');
-define('MAIL_PASS', 'la-contrasena-de-aplicacion');
-define('MAIL_FROM', 'tucorreo@gmail.com');
+```env
+MAIL_TRANSPORT=smtp
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_SECURE=tls
+MAIL_USER=tucorreo@gmail.com
+MAIL_PASS=la-contrasena-de-aplicacion
+MAIL_FROM=tucorreo@gmail.com
 ```
 
-> `config/mail.php` esta en `.gitignore`: nunca se sube al repositorio.
+> `.env` esta en `.gitignore`: nunca se sube al repositorio. Las variables
+> definidas en Apache o en el sistema operativo tienen prioridad sobre `.env`.
 > Si el envio falla, la operacion de negocio (la reserva, la cancelacion) se
 > completa igual y `correos_log.estado` guarda el motivo del fallo.
 

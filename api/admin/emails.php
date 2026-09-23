@@ -1,9 +1,6 @@
 <?php
 require_once __DIR__ . '/../../includes/auth.php';
-
-if (file_exists(__DIR__ . '/../../config/mail.php')) {
-    require_once __DIR__ . '/../../config/mail.php';
-}
+require_once __DIR__ . '/../../includes/mailer.php';
 
 start_session();
 

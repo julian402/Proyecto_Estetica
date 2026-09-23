@@ -1,19 +1,26 @@
 <?php
 require_once __DIR__ . '/db.php';
+require_once __DIR__ . '/env.php';
 
-// Configuracion de correo opcional: si no existe config/mail.php el sistema
-// funciona en modo 'log' (registra sin enviar), que es lo util en XAMPP.
+// config/mail.php se conserva para instalaciones anteriores; la configuracion
+// habitual se obtiene de las variables del sistema o del archivo .env local.
 if (file_exists(__DIR__ . '/../config/mail.php')) {
     require_once __DIR__ . '/../config/mail.php';
 }
 require_once __DIR__ . '/smtp.php';
 
-if (!defined('MAIL_ENABLED'))   define('MAIL_ENABLED', true);
-if (!defined('MAIL_TRANSPORT')) define('MAIL_TRANSPORT', 'log');
-if (!defined('MAIL_FROM'))      define('MAIL_FROM', 'no-reply@hanulbeauty.co');
-if (!defined('MAIL_FROM_NAME')) define('MAIL_FROM_NAME', 'Hanul Beauty');
-if (!defined('MAIL_REPLY_TO'))  define('MAIL_REPLY_TO', 'soporte@hanulbeauty.co');
-if (!defined('APP_BASE_URL'))   define('APP_BASE_URL', 'http://localhost/Proyecto_Estetica');
+if (!defined('MAIL_ENABLED'))   define('MAIL_ENABLED', env_bool('MAIL_ENABLED', true));
+if (!defined('MAIL_TRANSPORT')) define('MAIL_TRANSPORT', env_value('MAIL_TRANSPORT', 'log'));
+if (!defined('MAIL_HOST'))      define('MAIL_HOST', env_value('MAIL_HOST', ''));
+if (!defined('MAIL_PORT'))      define('MAIL_PORT', (int) env_value('MAIL_PORT', '587'));
+if (!defined('MAIL_SECURE'))    define('MAIL_SECURE', env_value('MAIL_SECURE', 'tls'));
+if (!defined('MAIL_USER'))      define('MAIL_USER', env_value('MAIL_USER', ''));
+if (!defined('MAIL_PASS'))      define('MAIL_PASS', env_value('MAIL_PASS', ''));
+if (!defined('MAIL_TIMEOUT'))   define('MAIL_TIMEOUT', (int) env_value('MAIL_TIMEOUT', '15'));
+if (!defined('MAIL_FROM'))      define('MAIL_FROM', env_value('MAIL_FROM', 'no-reply@hanulbeauty.co'));
+if (!defined('MAIL_FROM_NAME')) define('MAIL_FROM_NAME', env_value('MAIL_FROM_NAME', 'Hanul Beauty'));
+if (!defined('MAIL_REPLY_TO'))  define('MAIL_REPLY_TO', env_value('MAIL_REPLY_TO', 'soporte@hanulbeauty.co'));
+if (!defined('APP_BASE_URL'))   define('APP_BASE_URL', env_value('APP_BASE_URL', 'http://localhost/Proyecto_Estetica'));
 
 /**
  * Servicio de correo transaccional para Hanul Beauty.
